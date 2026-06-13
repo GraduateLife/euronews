@@ -5,9 +5,11 @@
   "type": "module",
   "packageManager": "pnpm@10.10.0",
   "scripts": {
-    "dev": "pnpm --filter @euronews/web dev",
-    "dev:worker": "pnpm --filter @euronews/worker dev",
-    "build": "pnpm -r build",
+      "dev": "pnpm --filter @euronews/web dev",
+      "dev:web": "pnpm --filter @euronews/web dev",
+      "dev:worker": "pnpm --filter @euronews/worker dev",
+      "dev:all": "pnpm -r --parallel --if-present dev",
+      "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "format": "prettier --write ."

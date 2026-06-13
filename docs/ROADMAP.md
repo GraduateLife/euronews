@@ -3,7 +3,7 @@
 ## Weekend MVP
 
 - Scaffold TanStack web app and Worker.
-- Mock today's 3 articles.
+- Mock today's 3 articles through a Hono BFF.
 - Build mobile article list and reader.
 - Implement word and sentence selection classification.
 - Build 50% word drawer.

@@ -25,6 +25,14 @@ The Worker owns:
 - Cloudflare AI image fallback.
 - Sentence practice generation and feedback.
 
+The Worker is intentionally split by code boundary, not by deployment boundary:
+
+- `src/bff`: Hono BFF routes consumed by the web app.
+- `src/article-fetchers`: article source adapters, starting with the fixed mock fetcher.
+- `src/crawler`: scheduled refresh orchestration.
+
+Keep these together while the project is small. Split `crawler` into its own app only if it needs queues, heavier parsing, or a different deployment cadence.
+
 ## Shared Package
 
 `packages/shared` defines domain types and constants used by both app and Worker.

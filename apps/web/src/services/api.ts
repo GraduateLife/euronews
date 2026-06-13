@@ -2,27 +2,42 @@ import type { ArticleDetail, ArticleSummary, SentencePractice, WordLookup } from
 import { priberamUrlFor } from "@euronews/shared";
 import { mockArticles } from "./mockData";
 
-const apiBase = import.meta.env.VITE_API_BASE_URL;
+const apiBase = import.meta.env.VITE_API_BASE_URL ?? "";
 
 export async function getToday(): Promise<ArticleSummary[]> {
-  if (!apiBase) return mockArticles.map(({ paragraphs: _paragraphs, ...article }) => article);
-  const response = await fetch(`${apiBase}/api/today`);
-  return response.json();
+  const fallback = () =>
+    mockArticles.map(({ paragraphs: _paragraphs, ...article }) => article);
+
+  try {
+    const data = await requestJson<{ articles: ArticleSummary[] }>("/api/today");
+    return data.articles;
+  } catch {
+    return fallback();
+  }
 }
 
 export async function getArticle(articleId: string): Promise<ArticleDetail> {
-  if (!apiBase) {
+  try {
+    const data = await requestJson<{ article: ArticleDetail }>(`/api/articles/${articleId}`);
+    return data.article;
+  } catch {
     const article = mockArticles.find((item) => item.id === articleId);
     if (!article) throw new Error("Article not found");
     return article;
   }
-  const response = await fetch(`${apiBase}/api/articles/${articleId}`);
-  return response.json();
 }
 
 export async function lookupWord(word: string): Promise<WordLookup> {
   const clean = word.trim().toLowerCase();
-  if (!apiBase) {
+
+  try {
+    const data = await requestJson<{ lookup: WordLookup }>("/api/words/lookup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ word: clean }),
+    });
+    return data.lookup;
+  } catch {
     return {
       word: clean,
       lemma: clean,
@@ -35,17 +50,17 @@ export async function lookupWord(word: string): Promise<WordLookup> {
       },
     };
   }
-
-  const response = await fetch(`${apiBase}/api/words/lookup`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ word: clean }),
-  });
-  return response.json();
 }
 
 export async function createSentencePractice(sourceSentence: string): Promise<SentencePractice> {
-  if (!apiBase) {
+  try {
+    const data = await requestJson<{ practice: SentencePractice }>("/api/sentences/practice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sourceSentence }),
+    });
+    return data.practice;
+  } catch {
     return {
       sourceSentence,
       structureLabel: "Noticia declarativa com complemento temporal",
@@ -54,11 +69,14 @@ export async function createSentencePractice(sourceSentence: string): Promise<Se
       promptZhHans: "政府在周一的会议前提出新的措施。",
     };
   }
+}
 
-  const response = await fetch(`${apiBase}/api/sentences/practice`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sourceSentence }),
-  });
-  return response.json();
+async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${apiBase}${path}`, init);
+
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  return response.json() as Promise<T>;
 }

@@ -2,14 +2,15 @@
 
 ## Active
 
-- [ ] Install dependencies.
-- [ ] Run web app locally.
+- [x] Install dependencies.
+- [x] Run web app locally.
+- [x] Add Hono BFF with fixed mock article fetcher.
 - [ ] Build article reader layout.
 - [ ] Implement selection-driven drawers.
 
 ## Backlog
 
-- [ ] Add Worker mock API.
+- [x] Add Worker mock API.
 - [ ] Add Euronews scraper.
 - [ ] Add Priberam adapter.
 - [ ] Add Unsplash adapter.

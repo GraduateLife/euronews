@@ -24,8 +24,11 @@ This project intentionally does not use Next.js. The frontend uses Vite, React, 
 
 ```bash
 pnpm install
-pnpm dev
+pnpm dev:worker
+pnpm dev:web
 ```
+
+Run the Worker and the web app in separate terminals. The web app proxies `/api/*` to `http://localhost:8787`, so the BFF is the normal development path. If the Worker is not running, the frontend keeps a small fallback mock so the UI remains inspectable.
 
 ## Environment
 
