@@ -1,10 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { getToday } from "../services/api";
+import { getReview, getToday } from "../services/api";
 
 export function TodayScreen() {
   const today = useQuery({ queryKey: ["today"], queryFn: getToday });
-  const articles = today.data ?? [];
+  const review = useQuery({ queryKey: ["review"], queryFn: getReview });
+  const completedArticleIds = review.data?.completedArticleIds ?? [];
+  const articles = (today.data ?? []).map((article) => ({
+    ...article,
+    completed: completedArticleIds.includes(article.id),
+  }));
   const done = articles.filter((article) => article.completed).length;
 
   return (
@@ -23,7 +28,7 @@ export function TodayScreen() {
               <strong>{article.title}</strong>
               <small>{article.dek}</small>
             </span>
-            <span className="minutes">{article.estimatedMinutes}m</span>
+            <span className="minutes">{article.completed ? "feito" : `${article.estimatedMinutes}m`}</span>
           </Link>
         ))}
       </div>

@@ -1,74 +1,97 @@
-import type { ArticleDetail, ArticleSummary, SentencePractice, WordLookup } from "@euronews/shared";
-import { priberamUrlFor } from "@euronews/shared";
-import { mockArticles } from "./mockData";
+import type {
+  ArticleDetail,
+  ArticleSummary,
+  ParagraphPractice,
+  PracticeFeedback,
+  ReviewState,
+  SavedParagraphPractice,
+  WordLookup,
+  WordNote,
+} from "@euronews/shared";
 
 const apiBase = import.meta.env.VITE_API_BASE_URL ?? "";
 
 export async function getToday(): Promise<ArticleSummary[]> {
-  const fallback = () =>
-    mockArticles.map(({ paragraphs: _paragraphs, ...article }) => article);
-
-  try {
-    const data = await requestJson<{ articles: ArticleSummary[] }>("/api/today");
-    return data.articles;
-  } catch {
-    return fallback();
-  }
+  const data = await requestJson<{ articles: ArticleSummary[] }>("/api/today");
+  return data.articles;
 }
 
 export async function getArticle(articleId: string): Promise<ArticleDetail> {
-  try {
-    const data = await requestJson<{ article: ArticleDetail }>(`/api/articles/${articleId}`);
-    return data.article;
-  } catch {
-    const article = mockArticles.find((item) => item.id === articleId);
-    if (!article) throw new Error("Article not found");
-    return article;
-  }
+  const data = await requestJson<{ article: ArticleDetail }>(`/api/articles/${articleId}`);
+  return data.article;
 }
 
 export async function lookupWord(word: string): Promise<WordLookup> {
-  const clean = word.trim().toLowerCase();
+  const data = await requestJson<{ lookup: WordLookup }>("/api/words/lookup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ word: word.trim().toLowerCase() }),
+  });
 
-  try {
-    const data = await requestJson<{ lookup: WordLookup }>("/api/words/lookup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ word: clean }),
-    });
-    return data.lookup;
-  } catch {
-    return {
-      word: clean,
-      lemma: clean,
-      priberamUrl: priberamUrlFor(clean),
-      examplePt: `A palavra "${clean}" aparece num contexto concreto.`,
-      image: {
-        url: `https://source.unsplash.com/600x600/?${encodeURIComponent(clean)}`,
-        alt: clean,
-        source: "placeholder",
-      },
-    };
-  }
+  return data.lookup;
 }
 
-export async function createSentencePractice(sourceSentence: string): Promise<SentencePractice> {
-  try {
-    const data = await requestJson<{ practice: SentencePractice }>("/api/sentences/practice", {
+export async function saveWordNote(input: {
+  lookup: WordLookup;
+  meaning: string;
+  tags: string;
+}): Promise<WordNote> {
+  const data = await requestJson<{ note: WordNote }>("/api/words/notes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  return data.note;
+}
+
+export async function createParagraphPractice(input: {
+  paragraphPt: string;
+  selectedText: string;
+  targetSentence: string;
+}): Promise<ParagraphPractice> {
+  const data = await requestJson<{ practice: ParagraphPractice }>("/api/paragraphs/practice", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  return data.practice;
+}
+
+export async function createParagraphFeedback(input: {
+  practice: ParagraphPractice;
+  userZhHans: string;
+  userPt: string;
+}): Promise<{ feedback: PracticeFeedback; practice: SavedParagraphPractice }> {
+  return requestJson<{ feedback: PracticeFeedback; practice: SavedParagraphPractice }>(
+    "/api/paragraphs/feedback",
+    {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sourceSentence }),
-    });
-    return data.practice;
-  } catch {
-    return {
-      sourceSentence,
-      structureLabel: "Noticia declarativa com complemento temporal",
-      tenseFocus: "presente, preterito perfeito, futuro, condicional",
-      generatedPt: "O governo apresenta novas medidas antes da reuniao de segunda-feira.",
-      promptZhHans: "政府在周一的会议前提出新的措施。",
-    };
-  }
+      body: JSON.stringify({
+        ...input.practice,
+        userZhHans: input.userZhHans,
+        userPt: input.userPt,
+      }),
+    }
+  );
+}
+
+export async function completeArticle(articleId: string): Promise<string[]> {
+  const data = await requestJson<{ completedArticleIds: string[] }>(
+    `/api/articles/${articleId}/complete`,
+    {
+      method: "POST",
+    }
+  );
+
+  return data.completedArticleIds;
+}
+
+export async function getReview(): Promise<ReviewState> {
+  const data = await requestJson<{ review: ReviewState }>("/api/review");
+  return data.review;
 }
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {

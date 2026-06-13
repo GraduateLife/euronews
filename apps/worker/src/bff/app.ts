@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Env } from "../env";
 import { articlesRoute } from "./routes/articles";
+import { reviewRoute } from "./routes/review";
 import { sentencesRoute } from "./routes/sentences";
 import { wordsRoute } from "./routes/words";
 
@@ -26,6 +27,7 @@ app.get("/api/health", (c) =>
 app.route("/api", articlesRoute);
 app.route("/api", wordsRoute);
 app.route("/api", sentencesRoute);
+app.route("/api", reviewRoute);
 
 app.notFound((c) =>
   c.json(

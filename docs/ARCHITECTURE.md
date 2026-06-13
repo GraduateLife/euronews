@@ -49,8 +49,9 @@ MVP can start with mocked data. Cloudflare target:
 
 - `GET /api/today`
 - `GET /api/articles/:id`
+- `POST /api/articles/:id/complete`
 - `POST /api/words/lookup`
 - `POST /api/words/notes`
-- `POST /api/sentences/practice`
-- `POST /api/sentences/feedback`
+- `POST /api/paragraphs/practice`
+- `POST /api/paragraphs/feedback`
 - `GET /api/review`

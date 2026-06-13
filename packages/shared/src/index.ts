@@ -40,18 +40,22 @@ export type WordNote = {
   meaning: string;
   tags: string[];
   imageUrl: string;
+  examplePt: string;
   priberamUrl: string;
+  savedAt: string;
 };
 
-export type SentencePractice = {
-  sourceSentence: string;
+export type ParagraphPractice = {
+  paragraphPt: string;
+  targetSentence: string;
+  selectedText: string;
   structureLabel: string;
   tenseFocus: string;
-  generatedPt: string;
+  generatedParagraphPt: string;
   promptZhHans: string;
 };
 
-export type SentenceFeedback = {
+export type PracticeFeedback = {
   summary: string;
   diff: Array<{
     kind: "keep" | "missing" | "extra" | "replace";
@@ -59,6 +63,20 @@ export type SentenceFeedback = {
     expected?: string;
     note?: string;
   }>;
+};
+
+export type SavedParagraphPractice = ParagraphPractice & {
+  id: string;
+  userZhHans: string;
+  userPt: string;
+  feedback: PracticeFeedback;
+  savedAt: string;
+};
+
+export type ReviewState = {
+  completedArticleIds: string[];
+  wordNotes: WordNote[];
+  paragraphPractices: SavedParagraphPractice[];
 };
 
 export const PRIBERAM_BASE_URL = "https://dicionario.priberam.org";
