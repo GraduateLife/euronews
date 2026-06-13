@@ -1,0 +1,277 @@
+:root {
+  color: #161616;
+  background: #fbfaf7;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #fbfaf7;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 1px solid #222;
+  background: #161616;
+  color: #fff;
+  border-radius: 8px;
+  min-height: 42px;
+  padding: 0 14px;
+}
+
+.app-shell {
+  max-width: 560px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding-bottom: 74px;
+  background: #fbfaf7;
+}
+
+.screen,
+.reader-screen {
+  padding: 24px 18px;
+}
+
+.page-header,
+.reader-header {
+  padding: 18px 0 20px;
+}
+
+.eyebrow,
+.source-link {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: #69645c;
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+h1 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.08;
+  letter-spacing: 0;
+}
+
+.reader-header h1 {
+  font-size: 28px;
+}
+
+.muted,
+.reader-header p,
+small {
+  color: #69645c;
+}
+
+.article-list {
+  display: grid;
+  gap: 10px;
+}
+
+.article-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  gap: 12px;
+  align-items: start;
+  padding: 16px 0;
+  border-top: 1px solid #dedbd4;
+}
+
+.article-row strong,
+.article-row small {
+  display: block;
+}
+
+.article-row strong {
+  line-height: 1.25;
+}
+
+.article-row small {
+  margin-top: 6px;
+  line-height: 1.35;
+}
+
+.article-index,
+.minutes {
+  color: #69645c;
+  font-size: 13px;
+}
+
+.paragraph-stack {
+  display: grid;
+  gap: 26px;
+}
+
+.paragraph-pair {
+  padding: 0 0 24px;
+  border-bottom: 1px solid #e5e1d8;
+}
+
+.pt-text {
+  margin: 0;
+  font-size: 21px;
+  line-height: 1.55;
+}
+
+.zh-text {
+  margin: 12px 0 0;
+  color: #5e5a52;
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: min(560px, 100vw);
+  transform: translateX(-50%);
+  border-top: 1px solid #d8d4cc;
+  background: rgba(251, 250, 247, 0.94);
+  backdrop-filter: blur(16px);
+}
+
+.bottom-nav a {
+  padding: 16px;
+  text-align: center;
+  color: #4f4b45;
+}
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: end;
+  background: rgba(22, 22, 22, 0.18);
+}
+
+.drawer {
+  width: min(560px, 100vw);
+  margin: 0 auto;
+  overflow: auto;
+  border: 1px solid #1f1f1f;
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  background: #fffefa;
+  box-shadow: 0 -18px 60px rgba(0, 0, 0, 0.18);
+  padding: 10px 16px 22px;
+}
+
+.word-drawer {
+  height: 50vh;
+}
+
+.sentence-drawer {
+  height: 90vh;
+}
+
+.drawer-grip {
+  width: 38px;
+  height: 4px;
+  margin: 0 auto 12px;
+  border-radius: 999px;
+  background: #c9c4ba;
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.drawer-header button {
+  width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 999px;
+}
+
+.word-image {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #ede9df;
+}
+
+.example,
+.source-sentence,
+.generated {
+  line-height: 1.5;
+}
+
+label {
+  display: grid;
+  gap: 7px;
+  margin-top: 14px;
+  color: #5e5a52;
+  font-size: 13px;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid #d3cec4;
+  border-radius: 8px;
+  background: #fbfaf7;
+  color: #161616;
+  padding: 11px 12px;
+}
+
+textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.external-link {
+  display: inline-flex;
+  margin-top: 16px;
+  border-bottom: 1px solid #161616;
+}
+
+.practice-flow {
+  display: grid;
+  gap: 12px;
+}
+
+.generated {
+  transition: opacity 3.6s ease, filter 3.6s ease;
+}
+
+.generated.faded {
+  opacity: 0.06;
+  filter: blur(3px);
+}
+
+.primary-action {
+  margin-top: 4px;
+}
+
+.review-actions {
+  display: grid;
+  gap: 10px;
+}
