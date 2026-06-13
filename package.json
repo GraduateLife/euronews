@@ -9,6 +9,7 @@
       "dev:web": "pnpm --filter @euronews/web dev",
       "dev:worker": "pnpm --filter @euronews/worker dev",
       "dev:all": "pnpm -r --parallel --if-present dev",
+      "db:migrate:local": "pnpm --filter @euronews/worker db:migrate:local",
       "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",

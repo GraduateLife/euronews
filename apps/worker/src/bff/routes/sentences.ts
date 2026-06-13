@@ -53,7 +53,7 @@ sentencesRoute.post("/paragraphs/feedback", async (c) => {
     userPt: body.userPt ?? "",
     expectedPt: body.generatedParagraphPt ?? "",
   });
-  const practice = saveParagraphPractice({
+  const practice = await saveParagraphPractice(c.env.DB, {
     paragraphPt: body.paragraphPt ?? "",
     selectedText: body.selectedText ?? "",
     targetSentence: body.targetSentence ?? "",

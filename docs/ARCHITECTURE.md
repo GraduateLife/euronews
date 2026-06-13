@@ -37,13 +37,25 @@ Keep these together while the project is small. Split `crawler` into its own app
 
 `packages/shared` defines domain types and constants used by both app and Worker.
 
-## Storage Plan
+## Storage
 
-MVP can start with mocked data. Cloudflare target:
+The BFF uses Cloudflare D1 for study state:
 
-- D1: articles, paragraphs, word notes, sentence practices, review state.
-- KV: short-lived cache for article fetches, Priberam lookups, Unsplash results.
-- R2: optional generated image storage if data URI responses become too heavy.
+- `completed_articles`: article completion state.
+- `word_notes`: saved word notes, user meanings, tags, images, and Priberam links.
+- `paragraph_practices`: paragraph-level practice attempts and feedback.
+
+Local development applies migrations with:
+
+```bash
+pnpm db:migrate:local
+```
+
+Later storage:
+
+- D1 can also store fetched articles and translated paragraphs once the real Euronews fetch job replaces the fixed fetcher.
+- KV can cache article fetches, Priberam lookups, and Unsplash results.
+- R2 can store generated images if Cloudflare AI image responses become too heavy.
 
 ## API Shape
 

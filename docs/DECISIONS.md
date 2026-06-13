@@ -14,7 +14,11 @@ Use Hono for the BFF API. Keep API routes and crawler logic in `apps/worker` for
 
 ## 2026-06-13: No Frontend Persistence Fallback
 
-The frontend should not hide missing API behavior with localStorage or local mock fallbacks. It calls the Hono BFF for article data, word notes, paragraph practice, completion state, and review state. The current Worker repository is in-memory for local development and should later be replaced by D1.
+The frontend should not hide missing API behavior with localStorage or local mock fallbacks. It calls the Hono BFF for article data, word notes, paragraph practice, completion state, and review state.
+
+## 2026-06-13: D1 For Study State
+
+Study state is persisted in Cloudflare D1, not Worker memory. Local development uses Wrangler's local D1 database with migrations under `apps/worker/migrations`.
 
 ## 2026-06-13: Paragraph Practice Unit
 

@@ -4,10 +4,15 @@ import { completeArticle, getReviewState } from "../../study/studyRepository";
 
 export const reviewRoute = new Hono<{ Bindings: Env }>();
 
-reviewRoute.get("/review", (c) => c.json({ review: getReviewState() }));
+reviewRoute.get("/review", async (c) =>
+  c.json({ review: await getReviewState(c.env.DB) })
+);
 
-reviewRoute.post("/articles/:articleId/complete", (c) => {
-  const completedArticleIds = completeArticle(c.req.param("articleId"));
+reviewRoute.post("/articles/:articleId/complete", async (c) => {
+  const completedArticleIds = await completeArticle(
+    c.env.DB,
+    c.req.param("articleId")
+  );
 
   return c.json({
     completedArticleIds,

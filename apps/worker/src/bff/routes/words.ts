@@ -51,7 +51,7 @@ wordsRoute.post("/words/notes", async (c) => {
     return c.json({ error: "lookup is required" }, 400);
   }
 
-  const note = saveWordNote({
+  const note = await saveWordNote(c.env.DB, {
     lookup: body.lookup,
     meaning: body.meaning ?? "",
     tags: body.tags ?? "",

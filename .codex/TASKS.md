@@ -14,11 +14,12 @@
 - [x] Replace custom drawer shell with shadcn/vaul Drawer.
 - [x] Remove explicit paragraph action buttons.
 - [x] Add double-click word lookup and selection-driven paragraph practice.
+- [x] Persist study state in Cloudflare D1 local database.
 
 ## Backlog
 
 - [x] Add Worker mock API.
-- [ ] Replace in-memory Worker review repository with D1.
+- [ ] Create remote Cloudflare D1 database and update production `database_id`.
 - [ ] Add Euronews scraper.
 - [ ] Add Priberam adapter.
 - [ ] Add Unsplash adapter.
