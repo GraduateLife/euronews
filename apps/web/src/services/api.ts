@@ -8,6 +8,7 @@ import type {
   WordLookup,
   WordNote,
 } from "@euronews/shared";
+import { priberamUrlFor } from "@euronews/shared";
 
 import { mockArticles } from "./mockData";
 
@@ -34,13 +35,43 @@ export async function getArticle(articleId: string): Promise<ArticleDetail> {
 }
 
 export async function lookupWord(word: string): Promise<WordLookup> {
-  const data = await requestJson<{ lookup: WordLookup }>("/api/words/lookup", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ word: word.trim().toLowerCase() }),
-  });
+  const term = word.trim();
+  try {
+    const data = await requestJson<{ lookup: WordLookup }>("/api/words/lookup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ word: term.toLowerCase() }),
+    });
 
-  return data.lookup;
+    return data.lookup;
+  } catch {
+    // Offline fallback so the study drawer stays inspectable without the Worker.
+    const headword = term.split(/\s+/)[0] ?? term;
+    return {
+      word: term,
+      lemma: term.toLowerCase(),
+      priberamUrl: priberamUrlFor(headword),
+      examplePt: `"${term}" aparece com frequência neste tipo de texto noticioso.`,
+      image: {
+        url: placeholderImage(term),
+        alt: term,
+        source: "placeholder",
+      },
+    };
+  }
+}
+
+function placeholderImage(term: string): string {
+  const label = term.replace(/[<>&]/g, "").slice(0, 24);
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='320' height='180'>
+    <rect width='100%' height='100%' fill='#ddcfac'/>
+    <rect x='8' y='8' width='304' height='164' fill='none' stroke='#5a4c39' stroke-width='1.5'/>
+    <text x='50%' y='52%' text-anchor='middle' dominant-baseline='middle'
+      font-family='Georgia, serif' font-style='italic' font-size='26' fill='#7c2d23'>${label}</text>
+    <text x='50%' y='80%' text-anchor='middle'
+      font-family='Arial, sans-serif' font-size='10' letter-spacing='2' fill='#7a6a52'>IMAGEM INDISPONÍVEL</text>
+  </svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
 export async function saveWordNote(input: {
