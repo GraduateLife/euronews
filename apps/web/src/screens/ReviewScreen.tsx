@@ -26,7 +26,7 @@ export function ReviewScreen() {
       </div>
 
       <section className="review-section">
-        <h2>Palavras</h2>
+        <h2 className="section-flag">Caderno de Palavras</h2>
         {store.wordNotes.length ? (
           store.wordNotes.map((note) => (
             <article className="review-card" key={note.id}>
@@ -47,7 +47,7 @@ export function ReviewScreen() {
       </section>
 
       <section className="review-section">
-        <h2>Paragrafos</h2>
+        <h2 className="section-flag">Treinos de Parágrafo</h2>
         {store.paragraphPractices.length ? (
           store.paragraphPractices.map((practice) => (
             <article className="review-card text-only" key={practice.id}>

@@ -56,11 +56,16 @@ export function ArticleReader({ article }: { article: ArticleDetail }) {
     <section className="reader-screen">
       <header className="reader-header">
         <a className="source-link" href={article.sourceUrl} target="_blank" rel="noreferrer">
-          Euronews PT
+          Euronews PT &middot; Reportagem
         </a>
         <h1>{article.title}</h1>
         <p>{article.dek}</p>
       </header>
+
+      <p className="reader-byline">
+        Por <b>Redação Euronews</b> &middot; {formatPublished(article.publishedAt)} &middot; {article.estimatedMinutes} min de
+        leitura
+      </p>
 
       <article className="paragraph-stack">
         {article.paragraphs.map((paragraph) => (
@@ -99,6 +104,18 @@ export function ArticleReader({ article }: { article: ArticleDetail }) {
       ) : null}
     </section>
   );
+}
+
+const PUBLISHED_FORMAT = new Intl.DateTimeFormat("pt-PT", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+function formatPublished(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Edição do dia";
+  return PUBLISHED_FORMAT.format(date).toUpperCase();
 }
 
 function cleanSelection(text: string) {

@@ -9,16 +9,28 @@ import type {
   WordNote,
 } from "@euronews/shared";
 
+import { mockArticles } from "./mockData";
+
 const apiBase = import.meta.env.VITE_API_BASE_URL ?? "";
 
 export async function getToday(): Promise<ArticleSummary[]> {
-  const data = await requestJson<{ articles: ArticleSummary[] }>("/api/today");
-  return data.articles;
+  try {
+    const data = await requestJson<{ articles: ArticleSummary[] }>("/api/today");
+    return data.articles;
+  } catch {
+    // The Worker is offline; keep the UI inspectable with the bundled fallback.
+    return mockArticles.map(({ paragraphs: _paragraphs, ...summary }) => summary);
+  }
 }
 
 export async function getArticle(articleId: string): Promise<ArticleDetail> {
-  const data = await requestJson<{ article: ArticleDetail }>(`/api/articles/${articleId}`);
-  return data.article;
+  try {
+    const data = await requestJson<{ article: ArticleDetail }>(`/api/articles/${articleId}`);
+    return data.article;
+  } catch {
+    const fallback = mockArticles.find((article) => article.id === articleId) ?? mockArticles[0];
+    return fallback;
+  }
 }
 
 export async function lookupWord(word: string): Promise<WordLookup> {
@@ -90,8 +102,12 @@ export async function completeArticle(articleId: string): Promise<string[]> {
 }
 
 export async function getReview(): Promise<ReviewState> {
-  const data = await requestJson<{ review: ReviewState }>("/api/review");
-  return data.review;
+  try {
+    const data = await requestJson<{ review: ReviewState }>("/api/review");
+    return data.review;
+  } catch {
+    return { completedArticleIds: [], wordNotes: [], paragraphPractices: [] };
+  }
 }
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {

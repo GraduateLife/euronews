@@ -8,6 +8,7 @@ import {
 import { ArticleReader } from "./screens/ArticleReader";
 import { TodayScreen } from "./screens/TodayScreen";
 import { ReviewScreen } from "./screens/ReviewScreen";
+import { Masthead } from "./ui/Masthead";
 import { getArticle, getToday } from "./services/api";
 
 type RouterContext = {
@@ -17,10 +18,15 @@ type RouterContext = {
 const rootRoute = createRootRouteWithContext<RouterContext>()({
   component: () => (
     <main className="app-shell">
+      <Masthead />
       <Outlet />
       <nav className="bottom-nav" aria-label="Primary">
-        <Link to="/">Today</Link>
-        <Link to="/review">Review</Link>
+        <Link to="/" activeOptions={{ exact: true }} activeProps={{ className: "active" }}>
+          Hoje
+        </Link>
+        <Link to="/review" activeProps={{ className: "active" }}>
+          Revisão
+        </Link>
       </nav>
     </main>
   ),
@@ -52,7 +58,7 @@ const articleRoute = createRoute({
       queryFn: () => getArticle(articleId),
     });
 
-    if (!article.data) return <div className="screen">Loading</div>;
+    if (!article.data) return <p className="loading-line">A compor a página…</p>;
     return <ArticleReader article={article.data} />;
   },
 });
