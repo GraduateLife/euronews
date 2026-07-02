@@ -79,6 +79,8 @@ export type ReviewState = {
   paragraphPractices: SavedParagraphPractice[];
 };
 
+export { sampleArticles } from "./sampleArticles";
+
 export const PRIBERAM_BASE_URL = "https://dicionario.priberam.org";
 
 export function priberamUrlFor(word: string) {
