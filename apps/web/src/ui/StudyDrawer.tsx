@@ -10,17 +10,22 @@ import {
 } from "../components/ui/drawer";
 import { lookupWord, saveWordNote } from "../services/api";
 
-export function WordDrawer({ word, onClose }: { word: string; onClose: () => void }) {
+/**
+ * One consistent study drawer for any selection — a single word or a longer
+ * expression. It looks the term up, shows an image and a short usage example,
+ * and lets the reader keep their own meaning and tags.
+ */
+export function StudyDrawer({ term, onClose }: { term: string; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [meaning, setMeaning] = useState("");
   const [tags, setTags] = useState("");
   const lookup = useQuery({
-    queryKey: ["word", word],
-    queryFn: () => lookupWord(word),
+    queryKey: ["term", term],
+    queryFn: () => lookupWord(term),
   });
   const save = useMutation({
     mutationFn: () => {
-      if (!lookup.data) throw new Error("Word lookup is not ready");
+      if (!lookup.data) throw new Error("Lookup is not ready");
       return saveWordNote({ lookup: lookup.data, meaning, tags });
     },
     onSuccess: () => {
@@ -28,16 +33,20 @@ export function WordDrawer({ word, onClose }: { word: string; onClose: () => voi
     },
   });
 
+  const isPhrase = term.trim().includes(" ");
+
   return (
     <Drawer open onOpenChange={(open) => !open && onClose()}>
       <DrawerContent height="half">
         <DrawerHeader>
           <div>
-            <DrawerTitle>{word}</DrawerTitle>
-            <DrawerDescription>imagem, exemplo curto, e a tua propria pista</DrawerDescription>
+            <DrawerTitle>{term}</DrawerTitle>
+            <DrawerDescription>
+              {isPhrase ? "Imagem, exemplo e a tua própria nota." : "Imagem, exemplo curto e a tua própria pista."}
+            </DrawerDescription>
           </div>
           <DrawerClose asChild>
-            <button aria-label="Close">x</button>
+            <button aria-label="Fechar">&times;</button>
           </DrawerClose>
         </DrawerHeader>
 
@@ -50,15 +59,15 @@ export function WordDrawer({ word, onClose }: { word: string; onClose: () => voi
               <input
                 value={meaning}
                 onChange={(event) => setMeaning(event.target.value)}
-                placeholder="Escreve em chines ou com as tuas palavras"
+                placeholder="Escreve em chinês ou com as tuas palavras"
               />
             </label>
             <label>
-              tags
+              etiquetas
               <input
                 value={tags}
                 onChange={(event) => setTags(event.target.value)}
-                placeholder="cidade, politica, verbo irregular..."
+                placeholder="cidade, política, verbo irregular…"
               />
             </label>
             <button className="primary-action" onClick={() => save.mutate()} disabled={save.isPending}>
