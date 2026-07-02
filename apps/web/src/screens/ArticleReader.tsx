@@ -1,6 +1,7 @@
 import type { ArticleDetail, Paragraph } from "@euronews/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
+import type { MouseEvent } from "react";
 import { completeArticle } from "../services/api";
 import { StudyDrawer } from "../ui/StudyDrawer";
 
@@ -19,14 +20,14 @@ export function ArticleReader({ article }: { article: ArticleDetail }) {
     },
   });
 
-  // Any selection — a single word or a longer expression — opens the same
-  // study drawer. Double-click hands us a word; a drag hands us a phrase.
-  function study(paragraph: Paragraph, allowFallback: boolean) {
-    const raw = window.getSelection()?.toString() ?? "";
-    const resolved = resolveTerm(raw, paragraph.pt);
-    const text = resolved || (allowFallback ? firstWordFromParagraph(paragraph.pt) : "");
-    if (!text) return;
-    setActive({ paragraphId: paragraph.id, text });
+  // A plain click studies exactly the word under the pointer (taken from the
+  // caret position, so the floated drop cap can never leak into it). A drag
+  // studies the highlighted expression instead. Single letters are ignored.
+  function study(event: MouseEvent<HTMLParagraphElement>, paragraph: Paragraph) {
+    const dragged = (window.getSelection()?.toString() ?? "").trim();
+    const term = dragged ? resolveTerm(dragged, paragraph.pt) : wordAtPoint(event.clientX, event.clientY);
+    if (!isStudyable(term)) return;
+    setActive({ paragraphId: paragraph.id, text: term.trim() });
   }
 
   function toggleReveal(paragraphId: string) {
@@ -71,8 +72,7 @@ export function ArticleReader({ article }: { article: ArticleDetail }) {
                 <p
                   lang="pt-PT"
                   className="pt-text selectable-text"
-                  onDoubleClick={() => study(paragraph, true)}
-                  onPointerUp={() => study(paragraph, false)}
+                  onClick={(event) => study(event, paragraph)}
                 >
                   {renderParagraphContent(paragraph, active, index === 0)}
                 </p>
@@ -123,13 +123,42 @@ function formatPublished(iso: string) {
   return PUBLISHED_FORMAT.format(date).toUpperCase();
 }
 
-function firstWordFromParagraph(text: string) {
-  return (
-    text
-      .split(/\s+/)
-      .map((word) => word.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, ""))
-      .find((word) => word.length > 5) ?? ""
-  );
+// A term is worth studying only if it carries at least two letters, so bare
+// articles and punctuation like "a", "o" or "—" never open the drawer.
+function isStudyable(term: string) {
+  return term.replace(/[^\p{L}]/gu, "").length >= 2;
+}
+
+// The word sitting under a screen point, read straight from the text node at
+// the caret. Because the drop cap is its own node, clicking the body never
+// picks it up, and clicking the drop cap yields a single letter (ignored).
+function wordAtPoint(x: number, y: number) {
+  const caret = caretFromPoint(x, y);
+  if (!caret || caret.node.nodeType !== Node.TEXT_NODE) return "";
+
+  const text = caret.node.textContent ?? "";
+  const isLetter = (char: string | undefined) => !!char && /[\p{L}\p{M}]/u.test(char);
+  let start = caret.offset;
+  let end = caret.offset;
+  while (start > 0 && isLetter(text[start - 1])) start--;
+  while (end < text.length && isLetter(text[end])) end++;
+  return text.slice(start, end);
+}
+
+function caretFromPoint(x: number, y: number): { node: Node; offset: number } | null {
+  const doc = document as Document & {
+    caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+    caretRangeFromPoint?: (x: number, y: number) => Range | null;
+  };
+  if (doc.caretPositionFromPoint) {
+    const position = doc.caretPositionFromPoint(x, y);
+    return position ? { node: position.offsetNode, offset: position.offset } : null;
+  }
+  if (doc.caretRangeFromPoint) {
+    const range = doc.caretRangeFromPoint(x, y);
+    return range ? { node: range.startContainer, offset: range.startOffset } : null;
+  }
+  return null;
 }
 
 /**
