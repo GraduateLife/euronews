@@ -74,7 +74,7 @@ export function ArticleReader({ article }: { article: ArticleDetail }) {
                   onDoubleClick={() => study(paragraph, true)}
                   onPointerUp={() => study(paragraph, false)}
                 >
-                  {renderHighlightedText(paragraph, active)}
+                  {renderParagraphContent(paragraph, active, index === 0)}
                 </p>
                 {showZh ? (
                   <p lang="zh-Hans" className="zh-text">
@@ -181,17 +181,33 @@ function derivePullQuote(paragraphs: Paragraph[], throughIndex: number) {
   return candidates[Math.floor(candidates.length / 2)];
 }
 
-function renderHighlightedText(paragraph: Paragraph, active: ActiveSelection) {
-  if (!active || active.paragraphId !== paragraph.id) return paragraph.pt;
+function renderParagraphContent(paragraph: Paragraph, active: ActiveSelection, isLead: boolean) {
+  const highlight = active && active.paragraphId === paragraph.id ? active.text : null;
 
-  const start = paragraph.pt.indexOf(active.text);
-  if (start < 0) return paragraph.pt;
+  if (!isLead) return withHighlight(paragraph.pt, highlight);
 
+  // Render the opening letter as a real (selectable) drop-cap span, and apply
+  // any highlight to the remainder so both features coexist.
+  const first = paragraph.pt.slice(0, 1);
+  const rest = paragraph.pt.slice(1);
+  const restHighlight = highlight && paragraph.pt.indexOf(highlight) >= 1 ? highlight : null;
   return (
     <>
-      {paragraph.pt.slice(0, start)}
-      <mark>{active.text}</mark>
-      {paragraph.pt.slice(start + active.text.length)}
+      <span className="dropcap">{first}</span>
+      {withHighlight(rest, restHighlight)}
+    </>
+  );
+}
+
+function withHighlight(text: string, highlight: string | null) {
+  if (!highlight) return text;
+  const start = text.indexOf(highlight);
+  if (start < 0) return text;
+  return (
+    <>
+      {text.slice(0, start)}
+      <mark>{highlight}</mark>
+      {text.slice(start + highlight.length)}
     </>
   );
 }
