@@ -31,6 +31,12 @@ export async function refreshDailyEdition(env: Env) {
     count: DAILY_ARTICLE_COUNT,
     isAlreadyStored: (id) => stored.has(id),
   });
+  if (fetched.length === 0) {
+    throw new Error(
+      "RSS was reachable but no article page could be parsed into paragraphs — " +
+        "the page structure may have changed, or article pages are being blocked. Check the worker logs for per-article reasons."
+    );
+  }
 
   const editionDate = new Date().toISOString().slice(0, 10);
   const articles: StorableArticle[] = [];
