@@ -11,5 +11,11 @@ migrations_dir = "migrations"
 [ai]
 binding = "AI"
 
+# Pin the dev port so the Vite proxy (which targets 8787) always matches.
+# If 8787 is taken wrangler now fails loudly instead of drifting to a
+# random port; kill the stale process (`lsof -ti:8787 | xargs kill`).
+[dev]
+port = 8787
+
 [triggers]
 crons = ["0 6 * * *"]
