@@ -26,7 +26,8 @@ export type FetchedArticle = {
   paragraphsPt: string[];
 };
 
-const RSS_URL = "https://pt.euronews.com/rss";
+const HOME_URL = "https://pt.euronews.com/";
+const FEED_CANDIDATES = ["https://pt.euronews.com/rss", "https://pt.euronews.com/rss?format=rss"];
 const USER_AGENT = "euronews-pt-reading-lab/0.1 (personal language-learning project; one fetch per day)";
 // Some CDNs reject unknown agents outright; we retry once with a browser UA.
 const BROWSER_UA =
@@ -68,17 +69,7 @@ export async function fetchDailyEuronewsArticles(options: {
   count: number;
   isAlreadyStored: (id: string) => boolean;
 }): Promise<FetchedArticle[]> {
-  const rssResponse = await politeFetch(RSS_URL);
-  if (!rssResponse.ok) {
-    throw new Error(
-      `RSS fetch failed: HTTP ${rssResponse.status} from ${RSS_URL} ` +
-        `(euronews may be blocking this request or rate-limiting; try again later)`
-    );
-  }
-  const items = parseRssItems(await rssResponse.text());
-  if (items.length === 0) {
-    throw new Error(`RSS parsed but contained no items — feed format may have changed (${RSS_URL})`);
-  }
+  const items = await loadFeedItems();
 
   const fresh = items.filter((item) => !options.isAlreadyStored(articleIdFromUrl(item.link)));
   const pool = fresh.length >= options.count ? fresh : items;
@@ -93,7 +84,8 @@ export async function fetchDailyEuronewsArticles(options: {
         console.log(JSON.stringify({ job: "euronews-fetch", skipped: item.link, status: pageResponse.status }));
         continue;
       }
-      const paragraphs = extractParagraphs(await pageResponse.text());
+      const html = await pageResponse.text();
+      const paragraphs = extractParagraphs(html);
       if (paragraphs.length < MIN_PARAGRAPHS) {
         console.log(
           JSON.stringify({ job: "euronews-fetch", skipped: item.link, reason: "too-few-paragraphs", found: paragraphs.length })
@@ -101,12 +93,14 @@ export async function fetchDailyEuronewsArticles(options: {
         continue;
       }
 
+      // Homepage-scraped items arrive without title/dek; fill them from the page.
+      const meta = extractTitleAndDek(html);
       articles.push({
         id: articleIdFromUrl(item.link),
-        title: item.title,
-        dek: item.description,
+        title: item.title || meta.title || item.link,
+        dek: item.description || meta.dek,
         sourceUrl: item.link,
-        publishedAt: toIso(item.pubDate),
+        publishedAt: item.pubDate ? toIso(item.pubDate) : dateFromUrl(item.link),
         paragraphsPt: paragraphs.slice(0, MAX_PARAGRAPHS),
       });
     } catch (error) {
@@ -115,6 +109,136 @@ export async function fetchDailyEuronewsArticles(options: {
   }
 
   return articles;
+}
+
+/**
+ * Load the day's candidate articles, most robust source first:
+ * 1. known RSS urls; 2. a feed advertised by the homepage <link> tag;
+ * 3. article links scraped straight from the homepage HTML.
+ */
+async function loadFeedItems(): Promise<FeedItem[]> {
+  const problems: string[] = [];
+
+  for (const url of FEED_CANDIDATES) {
+    try {
+      const response = await politeFetch(url);
+      if (!response.ok) {
+        problems.push(`${url}: HTTP ${response.status}`);
+        continue;
+      }
+      const items = parseRssItems(await response.text());
+      if (items.length) return items;
+      problems.push(`${url}: feed parsed but 0 items`);
+    } catch (error) {
+      problems.push(String(error));
+    }
+  }
+
+  try {
+    const response = await politeFetch(HOME_URL);
+    if (!response.ok) {
+      problems.push(`${HOME_URL}: HTTP ${response.status}`);
+    } else {
+      const html = await response.text();
+
+      const advertised = discoverFeedUrl(html, HOME_URL);
+      if (advertised) {
+        try {
+          const feedResponse = await politeFetch(advertised);
+          if (feedResponse.ok) {
+            const items = parseRssItems(await feedResponse.text());
+            if (items.length) return items;
+          }
+          problems.push(`${advertised}: advertised feed unusable`);
+        } catch (error) {
+          problems.push(String(error));
+        }
+      }
+
+      const scraped = itemsFromHomepage(html, HOME_URL);
+      if (scraped.length) return scraped;
+      problems.push("homepage reachable but no dated article links found (layout may have changed)");
+    }
+  } catch (error) {
+    problems.push(String(error));
+  }
+
+  throw new Error(`could not load an article list from euronews — ${problems.join(" | ")}`);
+}
+
+/** The RSS/Atom url advertised by a <link rel="alternate"> tag, if any. */
+export function discoverFeedUrl(html: string, baseUrl: string): string {
+  const links = html.match(/<link\b[^>]*>/gi) ?? [];
+  for (const tag of links) {
+    if (!/rel=["']alternate["']/i.test(tag)) continue;
+    if (!/type=["']application\/(rss|atom)\+xml["']/i.test(tag)) continue;
+    const href = tag.match(/href=["']([^"']+)["']/i)?.[1];
+    if (href) return new URL(href, baseUrl).toString();
+  }
+  return "";
+}
+
+/**
+ * Scrape dated article links (euronews urls carry /YYYY/MM/DD/) from the
+ * homepage. Titles are left blank and filled from each article page later.
+ */
+export function itemsFromHomepage(html: string, baseUrl: string): FeedItem[] {
+  const seen = new Set<string>();
+  const items: FeedItem[] = [];
+  const hrefs = html.match(/href=["'][^"']*\/\d{4}\/\d{2}\/\d{2}\/[a-z0-9-]+["']/gi) ?? [];
+  for (const raw of hrefs) {
+    const href = raw.replace(/^href=["']/i, "").replace(/["']$/, "");
+    let url: string;
+    try {
+      url = new URL(href, baseUrl).toString();
+    } catch {
+      continue;
+    }
+    if (!/^https:\/\/pt\.euronews\.com\//.test(url)) continue;
+    if (seen.has(url)) continue;
+    seen.add(url);
+    items.push({ title: "", link: url, description: "", pubDate: "" });
+  }
+  return items;
+}
+
+/** Title/dek pulled from an article page (JSON-LD headline, else og: tags). */
+export function extractTitleAndDek(html: string): { title: string; dek: string } {
+  let title = "";
+  const scripts = html.match(/<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/g) ?? [];
+  for (const script of scripts) {
+    try {
+      const parsed = JSON.parse(script.replace(/^<script[^>]*>/, "").replace(/<\/script>$/, "").trim());
+      for (const node of flattenJsonLd(parsed)) {
+        const headline = (node as { headline?: unknown }).headline;
+        if (typeof headline === "string" && headline.trim()) {
+          title = decodeEntities(headline.trim());
+          break;
+        }
+      }
+    } catch {
+      /* try next script */
+    }
+    if (title) break;
+  }
+  if (!title) {
+    const og = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i)?.[1] ?? "";
+    title = decodeEntities(og).replace(/\s*[|·-]\s*Euronews.*$/i, "").trim();
+  }
+
+  const ogDek =
+    html.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["']/i)?.[1] ??
+    html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i)?.[1] ??
+    "";
+  return { title, dek: firstSentence(decodeEntities(ogDek)) };
+}
+
+/** Publication date recovered from the /YYYY/MM/DD/ segment of the url. */
+export function dateFromUrl(url: string): string {
+  const match = url.match(/\/(\d{4})\/(\d{2})\/(\d{2})\//);
+  if (!match) return new Date().toISOString();
+  const date = new Date(`${match[1]}-${match[2]}-${match[3]}T08:00:00Z`);
+  return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
 }
 
 /** A stable id derived from the article URL slug. */
