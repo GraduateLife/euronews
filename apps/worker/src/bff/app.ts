@@ -17,6 +17,13 @@ app.use(
   })
 );
 
+app.get("/", (c) =>
+  c.text(
+    "euronews-pt-bff is running. API lives under /api (try /api/health or /api/today); " +
+      "the reading app itself is the Vite dev server on http://localhost:5173."
+  )
+);
+
 app.get("/api/health", (c) =>
   c.json({
     ok: true,
