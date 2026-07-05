@@ -28,17 +28,57 @@ export type FetchedArticle = {
 
 const RSS_URL = "https://pt.euronews.com/rss";
 const USER_AGENT = "euronews-pt-reading-lab/0.1 (personal language-learning project; one fetch per day)";
+// Some CDNs reject unknown agents outright; we retry once with a browser UA.
+const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 const ARTICLE_DELAY_MS = 800;
 const MIN_PARAGRAPHS = 3;
 const MAX_PARAGRAPHS = 10;
+
+/**
+ * Fetch with the honest User-Agent first; if the server rejects it with a
+ * 4xx (bot filtering), retry once as a regular browser. Network-level
+ * failures are wrapped with the URL so the /refresh error is diagnosable.
+ */
+async function politeFetch(url: string): Promise<Response> {
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT, Accept: "text/html,application/xml;q=0.9,*/*;q=0.8" },
+    });
+  } catch (error) {
+    throw new Error(`network error fetching ${url}: ${String(error)} (is this machine able to reach euronews?)`);
+  }
+  if (response.ok || response.status < 400 || response.status >= 500) return response;
+
+  try {
+    return await fetch(url, {
+      headers: {
+        "User-Agent": BROWSER_UA,
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "pt-PT,pt;q=0.9,en;q=0.7",
+      },
+    });
+  } catch (error) {
+    throw new Error(`network error fetching ${url}: ${String(error)}`);
+  }
+}
 
 export async function fetchDailyEuronewsArticles(options: {
   count: number;
   isAlreadyStored: (id: string) => boolean;
 }): Promise<FetchedArticle[]> {
-  const rssResponse = await fetch(RSS_URL, { headers: { "User-Agent": USER_AGENT } });
-  if (!rssResponse.ok) throw new Error(`RSS fetch failed: ${rssResponse.status}`);
+  const rssResponse = await politeFetch(RSS_URL);
+  if (!rssResponse.ok) {
+    throw new Error(
+      `RSS fetch failed: HTTP ${rssResponse.status} from ${RSS_URL} ` +
+        `(euronews may be blocking this request or rate-limiting; try again later)`
+    );
+  }
   const items = parseRssItems(await rssResponse.text());
+  if (items.length === 0) {
+    throw new Error(`RSS parsed but contained no items — feed format may have changed (${RSS_URL})`);
+  }
 
   const fresh = items.filter((item) => !options.isAlreadyStored(articleIdFromUrl(item.link)));
   const pool = fresh.length >= options.count ? fresh : items;
@@ -48,10 +88,18 @@ export async function fetchDailyEuronewsArticles(options: {
   for (const item of picked) {
     await sleep(ARTICLE_DELAY_MS);
     try {
-      const pageResponse = await fetch(item.link, { headers: { "User-Agent": USER_AGENT } });
-      if (!pageResponse.ok) continue;
+      const pageResponse = await politeFetch(item.link);
+      if (!pageResponse.ok) {
+        console.log(JSON.stringify({ job: "euronews-fetch", skipped: item.link, status: pageResponse.status }));
+        continue;
+      }
       const paragraphs = extractParagraphs(await pageResponse.text());
-      if (paragraphs.length < MIN_PARAGRAPHS) continue;
+      if (paragraphs.length < MIN_PARAGRAPHS) {
+        console.log(
+          JSON.stringify({ job: "euronews-fetch", skipped: item.link, reason: "too-few-paragraphs", found: paragraphs.length })
+        );
+        continue;
+      }
 
       articles.push({
         id: articleIdFromUrl(item.link),
