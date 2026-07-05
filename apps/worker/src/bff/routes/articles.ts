@@ -1,25 +1,31 @@
+import { sampleArticles } from "@euronews/shared";
 import { Hono } from "hono";
-import { fetchDailyMockArticles } from "../../article-fetchers/mockArticleFetcher";
+import { getLatestEdition, getStoredArticle } from "../../articles/articleRepository";
+import { refreshDailyEdition } from "../../crawler/scheduledArticleFetch";
 import type { Env } from "../../env";
 
 export const articlesRoute = new Hono<{ Bindings: Env }>();
 
-articlesRoute.get("/today", (c) => {
-  const articles = fetchDailyMockArticles().map(
-    ({ paragraphs: _paragraphs, ...summary }) => summary
-  );
+articlesRoute.get("/today", async (c) => {
+  const stored = await getLatestEdition(c.env.DB);
+  const usingStored = stored.length > 0;
+  const articles = usingStored
+    ? stored
+    : sampleArticles.map(({ paragraphs: _paragraphs, ...summary }) => summary);
 
   return c.json({
     articles,
-    source: "mock-fixed",
+    source: usingStored ? "euronews-d1" : "sample-fallback",
     fetchedAt: new Date().toISOString(),
   });
 });
 
-articlesRoute.get("/articles/:articleId", (c) => {
-  const article = fetchDailyMockArticles().find(
-    (item) => item.id === c.req.param("articleId")
-  );
+articlesRoute.get("/articles/:articleId", async (c) => {
+  const articleId = c.req.param("articleId");
+  const article =
+    (await getStoredArticle(c.env.DB, articleId)) ??
+    sampleArticles.find((item) => item.id === articleId) ??
+    null;
 
   if (!article) {
     return c.json({ error: "Article not found" }, 404);
@@ -27,7 +33,19 @@ articlesRoute.get("/articles/:articleId", (c) => {
 
   return c.json({
     article,
-    source: "mock-fixed",
     fetchedAt: new Date().toISOString(),
   });
+});
+
+/**
+ * Manual trigger for the daily fetch — same pipeline as the 06:00 UTC cron.
+ * Useful for first-time setup and local testing: curl -X POST /api/articles/refresh
+ */
+articlesRoute.post("/articles/refresh", async (c) => {
+  try {
+    const summary = await refreshDailyEdition(c.env);
+    return c.json({ ok: true, ...summary });
+  } catch (error) {
+    return c.json({ ok: false, error: String(error) }, 502);
+  }
 });

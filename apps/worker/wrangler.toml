@@ -8,5 +8,8 @@ database_name = "euronews_pt_reading_lab"
 database_id = "local-euronews-pt-reading-lab"
 migrations_dir = "migrations"
 
+[ai]
+binding = "AI"
+
 [triggers]
 crons = ["0 6 * * *"]

@@ -18,9 +18,9 @@ export function TodayScreen() {
     <section className="screen frontpage">
       <div className="frontpage__intro">
         <p className="kicker">Edição de hoje</p>
-        <h1>Três textos para ler devagar</h1>
+        <h1>{countWord(articles.length)} textos para ler devagar</h1>
         <p className="frontpage__progress">
-          <b>{done}</b> de <b>{articles.length || 3}</b> concluídos
+          <b>{done}</b> de <b>{articles.length}</b> concluídos
         </p>
       </div>
 
@@ -35,6 +35,11 @@ export function TodayScreen() {
       </div>
     </section>
   );
+}
+
+function countWord(count: number) {
+  const words = ["Zero", "Um", "Dois", "Três", "Quatro", "Cinco", "Seis", "Sete", "Oito", "Nove"];
+  return words[count] ?? String(count);
 }
 
 type Teaser = {

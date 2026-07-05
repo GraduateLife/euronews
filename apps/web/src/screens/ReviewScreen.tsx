@@ -15,8 +15,8 @@ export function ReviewScreen() {
         <p className="eyebrow">Revisao</p>
         <h1>Voltar ao que ficou</h1>
         <p className="muted">
-          {store.completedArticleIds.length}/3 textos completos, {store.wordNotes.length} palavras,{" "}
-          {store.paragraphPractices.length} paragrafos.
+          {store.completedArticleIds.length} textos completos, {store.wordNotes.length} palavras,{" "}
+          {store.paragraphPractices.length} parágrafos.
         </p>
       </header>
 
