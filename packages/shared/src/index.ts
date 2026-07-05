@@ -25,6 +25,8 @@ export type WordLookup = {
   lemma: string;
   priberamUrl: string;
   examplePt: string;
+  /** AI-generated Simplified Chinese definition; empty when AI is unavailable. */
+  meaningZhHans?: string;
   image: {
     url: string;
     alt: string;

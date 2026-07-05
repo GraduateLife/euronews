@@ -53,6 +53,14 @@ export function StudyDrawer({ term, onClose }: { term: string; onClose: () => vo
         {lookup.data ? (
           <div className="drawer-body">
             <img className="word-image" src={lookup.data.image.url} alt={lookup.data.image.alt} />
+            {lookup.data.image.attribution ? (
+              <p className="image-credit">{lookup.data.image.attribution}</p>
+            ) : null}
+            {lookup.data.meaningZhHans ? (
+              <p className="ai-meaning" lang="zh-Hans">
+                {lookup.data.meaningZhHans}
+              </p>
+            ) : null}
             <p className="example">{lookup.data.examplePt}</p>
             <label>
               significado
