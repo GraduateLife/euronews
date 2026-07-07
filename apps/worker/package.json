@@ -4,13 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-      "dev": "wrangler dev",
-      "deploy": "wrangler deploy",
-      "db:migrate:local": "wrangler d1 migrations apply euronews_pt_reading_lab --local",
-      "db:migrate:remote": "wrangler d1 migrations apply euronews_pt_reading_lab --remote",
-      "build": "tsc --noEmit",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate:local": "wrangler d1 migrations apply euronews_pt_reading_lab --local",
+    "db:migrate:remote": "wrangler d1 migrations apply euronews_pt_reading_lab --remote",
+    "build": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx test/parser.test.ts"
   },
   "dependencies": {
     "@euronews/shared": "workspace:*",
@@ -18,6 +19,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250613.0",
+    "tsx": "^4.23.0",
     "typescript": "^5.6.3",
     "wrangler": "^3.86.1"
   }

@@ -18,18 +18,26 @@ Primary routes:
 
 The Worker owns:
 
-- Article discovery and scraping.
-- Paragraph translation orchestration.
-- Word lookup adapter.
-- Unsplash image search adapter.
-- Cloudflare AI image fallback.
+- Article discovery and scraping (real Euronews PT fetch: RSS with homepage
+  fallback, JSON-LD/`<p>` body extraction).
+- Paragraph translation (Workers AI m2m100): upfront in the daily cron,
+  lazily on first read otherwise.
+- Word lookup: AI definition/example (llama) plus Unsplash image search with
+  a styled placeholder fallback.
 - Sentence practice generation and feedback.
 
 The Worker is intentionally split by code boundary, not by deployment boundary:
 
 - `src/bff`: Hono BFF routes consumed by the web app.
-- `src/article-fetchers`: article source adapters, starting with the fixed mock fetcher.
-- `src/crawler`: scheduled refresh orchestration.
+- `src/article-fetchers`: article source adapters (`euronews/` split into
+  feed sources, page parsing, and orchestration).
+- `src/crawler`: the daily refresh pipeline shared by cron and manual refresh.
+- `src/articles`, `src/study`: D1 repositories and article-domain logic.
+- `src/ai`: Workers AI helpers.
+- `src/lib`: shared fetch/text utilities.
+
+See `docs/WORKER_PIPELINE.md` for the data flow, the platform limits that
+shaped it, per-module change guides, and the deploy checklist.
 
 Keep these together while the project is small. Split `crawler` into its own app only if it needs queues, heavier parsing, or a different deployment cadence.
 
