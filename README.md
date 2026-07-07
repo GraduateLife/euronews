@@ -32,7 +32,16 @@ Run the Worker and the web app in separate terminals. The web app proxies `/api/
 
 ## Environment
 
-Copy `.env.example` to `.env` for local frontend variables and `apps/worker/.dev.vars.example` to `apps/worker/.dev.vars` for Worker secrets.
+Copy `.env.example` to `.env` **at the repo root** for frontend variables (vite is configured to read env files from the root) and `apps/worker/.dev.vars.example` to `apps/worker/.dev.vars` for Worker secrets. Restart `pnpm dev:web` after changing `.env` — vite only reads it at startup.
+
+To point the web app at a deployed Worker instead of the local one:
+
+```bash
+# .env (repo root)
+VITE_API_BASE_URL=https://euronews-pt-reading-lab.<your-subdomain>.workers.dev
+```
+
+Leave `VITE_API_BASE_URL` unset to use the vite dev proxy (`/api` → `http://localhost:8787`). If the app shows the bundled sample articles when you expected real ones, open the browser console — every API fallback logs a warning saying which request failed and which API base was in effect.
 
 ## Real Data Pipeline
 
