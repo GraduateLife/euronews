@@ -1,62 +1,149 @@
 # Euronews PT Reading Lab
 
-A mobile-first European Portuguese reading practice app built around daily Euronews articles, self-authored vocabulary notes, image recall, and sentence-pattern drills.
+[中文 README](./README.zh-CN.md)
 
-This project intentionally does not use Next.js. The frontend uses Vite, React, TanStack Router, and TanStack Query. The backend target is Cloudflare Workers.
+Euronews PT Reading Lab is a quiet, mobile-first European Portuguese reading trainer. It fetches daily Portuguese Euronews articles, presents paragraph-level Portuguese and Simplified Chinese, and turns reading moments into vocabulary notes, image recall, and sentence-pattern practice.
 
-## Product Shape
+This project intentionally does not use Next.js. The frontend is Vite + React + TanStack Router + TanStack Query; the backend is a Hono BFF running on Cloudflare Workers.
 
-- Fetch 3 Portuguese Euronews articles per day.
-- Show paragraph-level European Portuguese and Simplified Chinese.
-- Let the user select a word and open a 50% bottom drawer with image recall, a short usage sentence, user-entered meaning/tags, and a Priberam link.
-- Let the user select a sentence and open a 90% bottom drawer for structure-matched sentence practice.
-- Unlock review after the daily 3 articles are finished.
+## What It Does
 
-## Workspace Layout
+- Fetches the daily Portuguese Euronews edition and stores selected articles in Cloudflare D1.
+- Serves article summaries, full article paragraphs, completion state, word notes, and review state through a Worker BFF.
+- Translates paragraphs from European Portuguese to Simplified Chinese with Workers AI, lazily on first read to stay within Worker request limits.
+- Lets readers hold/select a word or phrase to open a 50% study drawer with an image, a short example, an AI language hint, a user-authored note, tags, and a Priberam link.
+- Supports paragraph-aware sentence practice and feedback through a 90% drawer workflow.
+- Unlocks review after the daily article set is completed.
 
-- `apps/web`: mobile-first TanStack Router web app.
-- `apps/worker`: Cloudflare Worker API, scheduled fetch jobs, AI/image adapters.
-- `packages/shared`: shared schemas, types, and constants.
-- `docs`: architecture, product memory, API notes, decision records.
-- `.codex`: Codex collaboration memory and task handoff notes.
+## Workspace Structure
+
+```text
+apps/
+  web/       Vite React app: mobile reader UI, drawers, review screen, API client
+  worker/    Cloudflare Worker: Hono BFF, article crawler, D1 repositories, AI/image adapters
+packages/
+  shared/    Shared domain types, sample articles, Priberam URL helper
+docs/
+  ARCHITECTURE.md        System map and storage/API overview
+  WORKER_PIPELINE.md     Euronews fetch, lazy translation, D1 storage, cron/deploy notes
+  API_NOTES.md           Source/provider notes
+  DECISIONS.md           Product and architecture decisions
+  PROJECT_MEMORY.md      Product intent, taste, interaction rules
+  ROADMAP.md             MVP and future work
+```
+
+The Worker code is split by responsibility rather than deployment boundary:
+
+- `src/bff`: Hono routes consumed by the web app, plus OpenAPI/Swagger docs.
+- `src/article-fetchers`: Euronews feed/page parsing and source adapters.
+- `src/crawler`: scheduled/manual daily refresh pipeline.
+- `src/articles`: D1 article repositories and lazy translation helpers.
+- `src/study`: D1 study-state repositories.
+- `src/ai`: Workers AI translation and word-description helpers.
+- `src/lib`: shared fetch/text utilities.
+
+## UI Style
+
+The app is designed as a reading notebook, not a gamified language-learning toy. The visual system is mobile-first, portrait-scroll oriented, and inspired by aged newsprint:
+
+- warm paper tones, black ink, oxblood accent color;
+- serif editorial typography with a masthead, dateline, pull quotes, drop caps, and ruled separators;
+- restrained controls that stay close to the reading flow;
+- bottom drawers for study actions so the article remains the primary surface;
+- no marketing landing page and no desktop-first dashboard framing.
+
+See [docs/PROJECT_MEMORY.md](./docs/PROJECT_MEMORY.md) and [docs/DECISIONS.md](./docs/DECISIONS.md) for the product taste and interaction rules that shaped the UI.
 
 ## First Commands
 
 ```bash
 pnpm install
+pnpm db:migrate:local
 pnpm dev:worker
 pnpm dev:web
 ```
 
-Run the Worker and the web app in separate terminals. The web app proxies `/api/*` to `http://localhost:8787`, so the BFF is the normal development path. If the Worker is not running, the frontend keeps a small fallback mock so the UI remains inspectable.
+Run the Worker and web app in separate terminals. The web app proxies `/api/*` to `http://localhost:8787`; leave `VITE_API_BASE_URL` unset for local development.
+
+Useful URLs:
+
+- Web app: `http://localhost:5173`
+- Worker health: `http://localhost:8787/api/health`
+- Swagger UI: `http://localhost:8787/api/docs`
+- OpenAPI JSON: `http://localhost:8787/api/openapi.json`
 
 ## Environment
 
-Copy `.env.example` to `.env` **at the repo root** for frontend variables (vite is configured to read env files from the root) and `apps/worker/.dev.vars.example` to `apps/worker/.dev.vars` for Worker secrets. Restart `pnpm dev:web` after changing `.env` — vite only reads it at startup.
+Copy `.env.example` to `.env` at the repo root. Vite reads root env files, so restart `pnpm dev:web` after changing it.
 
-To point the web app at a deployed Worker instead of the local one:
+To point the frontend at a deployed Worker:
 
 ```bash
-# .env (repo root)
 VITE_API_BASE_URL=https://euronews-pt-reading-lab.<your-subdomain>.workers.dev
 ```
 
-Leave `VITE_API_BASE_URL` unset to use the vite dev proxy (`/api` → `http://localhost:8787`). If the app shows the bundled sample articles when you expected real ones, open the browser console — every API fallback logs a warning saying which request failed and which API base was in effect.
-
-## Real Data Pipeline
-
-The Worker can fetch real Euronews PT articles once a day (06:00 UTC cron), pick 5 at random, translate each paragraph to Simplified Chinese with Workers AI, and store everything in D1. `/api/today` serves the latest stored edition and falls back to the bundled sample articles while the database is empty.
-
-Local setup:
+Worker secrets live outside source control. For local Worker development, put optional secrets in `apps/worker/.dev.vars`; for deployment, use Wrangler secrets.
 
 ```bash
-wrangler login                      # Workers AI runs against your account, free tier
-pnpm db:migrate:local               # creates the articles tables
-# put UNSPLASH_ACCESS_KEY=... into apps/worker/.dev.vars for real word images
-pnpm dev:worker
-curl -X POST http://localhost:8787/api/articles/refresh   # fetch today's edition now
+# optional: enables real Unsplash photos in the word drawer
+UNSPLASH_ACCESS_KEY=...
 ```
 
-Everything degrades gracefully: without `wrangler login` there are no AI translations/definitions, without the Unsplash key the word drawer shows a styled placeholder image, and without a stored edition the sample articles are served.
+Without a Worker, the frontend logs a warning and falls back to bundled sample articles. Without Workers AI, translations and word hints degrade gracefully. Without Unsplash, the word drawer shows a styled placeholder image.
 
-Deploying for the daily cron: create a real D1 database (`wrangler d1 create euronews_pt_reading_lab`), put its id into `wrangler.toml`, run `pnpm --filter @euronews/worker db:migrate:remote`, set the secret (`wrangler secret put UNSPLASH_ACCESS_KEY`), then `pnpm --filter @euronews/worker deploy`.
+## Data Pipeline
+
+The daily pipeline is documented in detail in [docs/WORKER_PIPELINE.md](./docs/WORKER_PIPELINE.md).
+
+High-level flow:
+
+```text
+scheduled cron or POST /api/articles/refresh
+  -> fetchDailyEuronewsArticles
+  -> parse RSS/homepage/article pages
+  -> store selected articles and paragraphs in D1
+  -> translate paragraphs lazily when GET /api/articles/:id is opened
+```
+
+The deployed Worker has a cron trigger at `06:00 UTC`. Manual refresh is available during development:
+
+```bash
+curl -X POST http://localhost:8787/api/articles/refresh
+```
+
+## API Reference
+
+The Worker exposes a Swagger/OpenAPI reference:
+
+- Local Swagger UI: `http://localhost:8787/api/docs`
+- Local OpenAPI JSON: `http://localhost:8787/api/openapi.json`
+
+Main route groups:
+
+- `GET /api/today`
+- `GET /api/articles/status`
+- `GET /api/articles/:articleId`
+- `POST /api/articles/refresh`
+- `POST /api/articles/:articleId/complete`
+- `POST /api/words/lookup`
+- `POST /api/words/notes`
+- `POST /api/paragraphs/practice`
+- `POST /api/paragraphs/feedback`
+- `GET /api/review`
+- `GET /api/debug/translate`
+
+## Provider Reference
+
+External service usage and quick links are kept in [docs/SERVICE_PROVIDERS.md](./docs/SERVICE_PROVIDERS.md). Current providers are Cloudflare and Unsplash; Priberam and Euronews are also documented as content/reference sources.
+
+## Deploy Notes
+
+```bash
+cd apps/worker
+npx wrangler d1 create euronews_pt_reading_lab
+pnpm db:migrate:remote
+npx wrangler secret put UNSPLASH_ACCESS_KEY
+npx wrangler deploy
+```
+
+After deploy, point the frontend to the Worker with `VITE_API_BASE_URL`. If the frontend is hosted beyond localhost, add its origin to the CORS list in `apps/worker/src/bff/app.ts`.
