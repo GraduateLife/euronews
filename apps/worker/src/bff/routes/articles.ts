@@ -20,6 +20,21 @@ articlesRoute.get("/today", async (c) => {
   });
 });
 
+/** Latest stored edition, for polling after a refresh.
+ *  Registered before /articles/:articleId so "status" is not read as an id. */
+articlesRoute.get("/articles/status", async (c) => {
+  const row = await c.env.DB.prepare(
+    "SELECT edition_date, COUNT(*) AS article_count, MAX(fetched_at) AS last_fetched_at FROM articles GROUP BY edition_date ORDER BY edition_date DESC LIMIT 1"
+  ).first<{ edition_date: string; article_count: number; last_fetched_at: string }>();
+
+  return c.json({
+    hasStoredEdition: Boolean(row),
+    editionDate: row?.edition_date ?? null,
+    articleCount: row?.article_count ?? 0,
+    lastFetchedAt: row?.last_fetched_at ?? null,
+  });
+});
+
 articlesRoute.get("/articles/:articleId", async (c) => {
   const articleId = c.req.param("articleId");
   const article =
@@ -39,13 +54,21 @@ articlesRoute.get("/articles/:articleId", async (c) => {
 
 /**
  * Manual trigger for the daily fetch — same pipeline as the 06:00 UTC cron.
- * Useful for first-time setup and local testing: curl -X POST /api/articles/refresh
+ * The full run (fetch + per-paragraph AI translation) takes ~30s, far too
+ * long for a synchronous HTTP response, so it runs in the background via
+ * waitUntil and this endpoint returns immediately. Poll /api/articles/status
+ * (or watch `wrangler tail`) to see the outcome.
  */
-articlesRoute.post("/articles/refresh", async (c) => {
-  try {
-    const summary = await refreshDailyEdition(c.env);
-    return c.json({ ok: true, ...summary });
-  } catch (error) {
-    return c.json({ ok: false, error: String(error) }, 502);
-  }
+articlesRoute.post("/articles/refresh", (c) => {
+  c.executionCtx.waitUntil(
+    refreshDailyEdition(c.env)
+      .then((summary) => console.log(JSON.stringify({ job: "manual-refresh", ok: true, ...summary })))
+      .catch((error) => console.log(JSON.stringify({ job: "manual-refresh", ok: false, error: String(error) })))
+  );
+
+  return c.json({
+    ok: true,
+    started: true,
+    note: "Fetching and translating in the background (~1 minute). Poll GET /api/articles/status; errors appear in `wrangler tail`.",
+  });
 });
