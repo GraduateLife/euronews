@@ -37,11 +37,17 @@ export async function translatePtToZh(env: Env, textPt: string): Promise<string>
 }
 
 export type WordInsight = {
-  meaningZhHans: string;
+  definitionPt: string;
   examplePt: string;
   imageQueryEn: string;
 };
 
+/**
+ * A monolingual (Portuguese-only) dictionary entry for a term, the way an
+ * immersion learner wants it: the meaning explained in simple Portuguese, a
+ * short example, and an English query for an illustrative photo. Kept
+ * deliberately simple so an 8B model stays reliable.
+ */
 export async function describeWord(env: Env, term: string): Promise<WordInsight | null> {
   if (!env.AI) return null;
   try {
@@ -50,30 +56,25 @@ export async function describeWord(env: Env, term: string): Promise<WordInsight 
         {
           role: "system",
           content:
-            "You are a European Portuguese reading assistant for Chinese learners. " +
-            "The term comes from a Portuguese news article, but news text also contains " +
-            "English loanwords, foreign names, and acronyms — identify which case it is. " +
-            "Answer ONLY with a JSON object, no markdown, with exactly these keys: " +
-            '"meaning_zh" (Simplified Chinese, max 50 chars): for a normal European Portuguese word give a concise definition; ' +
-            "if the term is NOT Portuguese, start with a tag like 【英语】/【法语】/【专有名词】 then the meaning; " +
-            "if it is an acronym or abbreviation, start with 【缩写】 then the full expansion and its Chinese meaning " +
-            '(e.g. for "UE": 【缩写】União Europeia，欧盟). ' +
-            '"example_pt" (one natural European Portuguese sentence using the term, max 20 words). ' +
-            '"image_query_en" (2-3 English words describing a concrete, photographable scene for the term).',
+            "És um dicionário de português europeu. Explicas a palavra em português simples (nível A2), " +
+            "sem usar tradução para outras línguas. Responde APENAS com um objeto JSON, sem markdown, " +
+            'com estas chaves exatas: "definicao" (uma definição curta e clara em português simples, no máximo 20 palavras), ' +
+            '"exemplo" (uma frase de exemplo natural em português europeu com a palavra, no máximo 20 palavras), ' +
+            '"imagem_en" (2 a 3 palavras em inglês que descrevam uma cena concreta e fotografável para a palavra).',
         },
-        { role: "user", content: `Term: "${term}"` },
+        { role: "user", content: `Palavra: "${term}"` },
       ],
-      max_tokens: 220,
+      max_tokens: 200,
     } as never)) as { response?: string };
 
     const parsed = extractJson(result.response ?? "");
     if (!parsed) return null;
-    const meaning = str(parsed.meaning_zh);
-    if (!meaning) return null;
+    const definitionPt = str(parsed.definicao);
+    if (!definitionPt) return null;
     return {
-      meaningZhHans: meaning,
-      examplePt: str(parsed.example_pt),
-      imageQueryEn: str(parsed.image_query_en),
+      definitionPt,
+      examplePt: str(parsed.exemplo),
+      imageQueryEn: str(parsed.imagem_en),
     };
   } catch (error) {
     console.log(JSON.stringify({ job: "describe-word", term, error: String(error) }));

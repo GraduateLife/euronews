@@ -16,7 +16,7 @@ wordsRoute.post("/words/lookup", async (c) => {
     return c.json({ error: "word is required" }, 400);
   }
 
-  // AI definition (Chinese meaning + PT example + a good English image query),
+  // Monolingual Portuguese definition + PT example + an English image query,
   // then an Unsplash photo for that query. Both degrade gracefully.
   const insight = await describeWord(c.env, word);
   const image = await searchUnsplash(c.env, insight?.imageQueryEn || word, word);
@@ -26,7 +26,7 @@ wordsRoute.post("/words/lookup", async (c) => {
     lemma: word.toLowerCase(),
     priberamUrl: priberamUrlFor(firstWord(word)),
     examplePt: insight?.examplePt || `Encontrei "${word}" numa notícia de hoje.`,
-    meaningZhHans: insight?.meaningZhHans || "",
+    definitionPt: insight?.definitionPt || "",
     image,
   };
 
