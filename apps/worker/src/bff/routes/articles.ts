@@ -1,12 +1,7 @@
 import { sampleArticles } from "@euronews/shared";
-import type { ArticleDetail } from "@euronews/shared";
 import { Hono } from "hono";
-import { translatePtToZh } from "../../ai/languageAi";
-import {
-  getLatestEdition,
-  getStoredArticle,
-  saveParagraphTranslation,
-} from "../../articles/articleRepository";
+import { getLatestEdition, getStoredArticle } from "../../articles/articleRepository";
+import { ensureTranslations } from "../../articles/ensureTranslations";
 import { refreshDailyEdition } from "../../crawler/scheduledArticleFetch";
 import type { Env } from "../../env";
 
@@ -57,35 +52,6 @@ articlesRoute.get("/articles/:articleId", async (c) => {
     fetchedAt: new Date().toISOString(),
   });
 });
-
-/**
- * Translate any untranslated paragraphs the first time an article is opened
- * (the manual refresh stores articles untranslated) and persist the result so
- * later reads are served straight from D1.
- */
-async function ensureTranslations(env: Env, article: ArticleDetail): Promise<ArticleDetail> {
-  if (!env.AI) return article;
-  const missing = article.paragraphs.filter((paragraph) => !paragraph.zhHans);
-  if (missing.length === 0) return article;
-
-  const translations = await Promise.all(missing.map((paragraph) => translatePtToZh(env, paragraph.pt)));
-  const translatedById = new Map<string, string>();
-  await Promise.all(
-    missing.map((paragraph, i) => {
-      if (!translations[i]) return Promise.resolve();
-      translatedById.set(paragraph.id, translations[i]);
-      return saveParagraphTranslation(env.DB, paragraph.id, translations[i]);
-    })
-  );
-  if (translatedById.size === 0) return article;
-
-  return {
-    ...article,
-    paragraphs: article.paragraphs.map((paragraph) =>
-      translatedById.has(paragraph.id) ? { ...paragraph, zhHans: translatedById.get(paragraph.id)! } : paragraph
-    ),
-  };
-}
 
 /**
  * Manual trigger for the daily fetch. Runs synchronously WITHOUT translation

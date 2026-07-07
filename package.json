@@ -11,6 +11,7 @@
       "dev:all": "pnpm -r --parallel --if-present dev",
       "db:migrate:local": "pnpm --filter @euronews/worker db:migrate:local",
       "build": "pnpm -r build",
+    "test": "pnpm -r --if-present test",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "format": "prettier --write ."

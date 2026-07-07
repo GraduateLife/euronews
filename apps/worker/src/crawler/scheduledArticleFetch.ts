@@ -2,7 +2,7 @@ import { translatePtToZh } from "../ai/languageAi";
 import {
   estimateMinutes,
   fetchDailyEuronewsArticles,
-} from "../article-fetchers/euronewsFetcher";
+} from "../article-fetchers/euronews";
 import { deleteEdition, listStoredArticleIds, storeArticles } from "../articles/articleRepository";
 import type { StorableArticle } from "../articles/articleRepository";
 import type { Env } from "../env";
