@@ -1,15 +1,31 @@
 import type { ArticleDetail, Paragraph } from "@euronews/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Fragment, useState } from "react";
-import type { MouseEvent } from "react";
+import { Fragment, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { completeArticle } from "../services/api";
 import { StudyDrawer } from "../ui/StudyDrawer";
 
 type ActiveSelection = { paragraphId: string; text: string } | null;
 
+type PressState = {
+  paragraphId: string;
+  term: string;
+  left: number;
+  top: number;
+  width: number;
+} | null;
+
+/** How long a word must be held before it opens the study drawer. Keep in
+ *  sync with the .press-ink animation duration in styles.css. */
+const PRESS_MS = 550;
+const PRESS_CANCEL_DISTANCE = 8;
+
 export function ArticleReader({ article }: { article: ArticleDetail }) {
   const queryClient = useQueryClient();
   const [active, setActive] = useState<ActiveSelection>(null);
+  const [press, setPress] = useState<PressState>(null);
+  const pressTimer = useRef<number | null>(null);
+  const pressOrigin = useRef<{ x: number; y: number } | null>(null);
   const [showAllTranslation, setShowAllTranslation] = useState(false);
   const [revealed, setRevealed] = useState<Set<string>>(() => new Set());
   const complete = useMutation({
@@ -20,12 +36,52 @@ export function ArticleReader({ article }: { article: ArticleDetail }) {
     },
   });
 
-  // A plain click studies exactly the word under the pointer (taken from the
-  // caret position, so the floated drop cap can never leak into it). A drag
-  // studies the highlighted expression instead. Single letters are ignored.
-  function study(event: MouseEvent<HTMLParagraphElement>, paragraph: Paragraph) {
+  // Studying a word is a deliberate act: hold the word for PRESS_MS while an
+  // ink underline draws itself beneath it, then the drawer opens. Releasing
+  // or moving early cancels — a plain click no longer opens anything.
+  // Dragging a selection still studies the whole expression on release.
+  function clearPress() {
+    if (pressTimer.current !== null) {
+      window.clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+    pressOrigin.current = null;
+    setPress(null);
+  }
+
+  function onPressStart(event: ReactPointerEvent<HTMLParagraphElement>, paragraph: Paragraph) {
+    if (event.button !== 0) return;
+    const found = wordRangeAtPoint(event.clientX, event.clientY);
+    if (!found || !isStudyable(found.term)) return;
+
+    pressOrigin.current = { x: event.clientX, y: event.clientY };
+    setPress({ paragraphId: paragraph.id, term: found.term, ...found.rect });
+    pressTimer.current = window.setTimeout(() => {
+      pressTimer.current = null;
+      // On touch devices the OS long-press may have selected text natively;
+      // defer to that selection (it is handled on pointer-up).
+      const native = window.getSelection();
+      if (native && !native.isCollapsed) {
+        clearPress();
+        return;
+      }
+      setActive({ paragraphId: paragraph.id, text: found.term });
+      clearPress();
+    }, PRESS_MS);
+  }
+
+  function onPressMove(event: ReactPointerEvent<HTMLParagraphElement>) {
+    if (!pressOrigin.current) return;
+    const dx = event.clientX - pressOrigin.current.x;
+    const dy = event.clientY - pressOrigin.current.y;
+    if (Math.hypot(dx, dy) > PRESS_CANCEL_DISTANCE) clearPress();
+  }
+
+  function onPressEnd(paragraph: Paragraph) {
+    clearPress();
     const dragged = (window.getSelection()?.toString() ?? "").trim();
-    const term = dragged ? resolveTerm(dragged, paragraph.pt) : wordAtPoint(event.clientX, event.clientY);
+    if (!dragged) return;
+    const term = resolveTerm(dragged, paragraph.pt);
     if (!isStudyable(term)) return;
     setActive({ paragraphId: paragraph.id, text: term.trim() });
   }
@@ -77,7 +133,11 @@ export function ArticleReader({ article }: { article: ArticleDetail }) {
                 <p
                   lang="pt-PT"
                   className="pt-text selectable-text"
-                  onClick={(event) => study(event, paragraph)}
+                  onPointerDown={(event) => onPressStart(event, paragraph)}
+                  onPointerMove={onPressMove}
+                  onPointerUp={() => onPressEnd(paragraph)}
+                  onPointerLeave={clearPress}
+                  onPointerCancel={clearPress}
                 >
                   {renderParagraphContent(paragraph, active, index === 0)}
                 </p>
@@ -111,6 +171,14 @@ export function ArticleReader({ article }: { article: ArticleDetail }) {
         </button>
       </footer>
 
+      {press ? (
+        <span
+          className="press-ink"
+          aria-hidden="true"
+          style={{ left: press.left, top: press.top, width: press.width }}
+        />
+      ) : null}
+
       {active ? <StudyDrawer term={active.text} onClose={() => setActive(null)} /> : null}
     </section>
   );
@@ -134,20 +202,43 @@ function isStudyable(term: string) {
   return term.replace(/[^\p{L}]/gu, "").length >= 2;
 }
 
-// The word sitting under a screen point, read straight from the text node at
-// the caret. Because the drop cap is its own node, clicking the body never
-// picks it up, and clicking the drop cap yields a single letter (ignored).
-function wordAtPoint(x: number, y: number) {
+/**
+ * The word under a screen point plus the rectangle to draw the press
+ * underline in, read straight from the text node at the caret (the floated
+ * drop cap is its own node, so it can never leak into the result).
+ *
+ * Internal hyphens are part of the word — European Portuguese compounds like
+ * "lê-se" or "Estados-membros" must be looked up whole. Only true hyphens in
+ * the text count: the hyphens `hyphens: auto` renders at line breaks are a
+ * paint-time effect and never exist in the DOM text this reads from.
+ */
+function wordRangeAtPoint(
+  x: number,
+  y: number
+): { term: string; rect: { left: number; top: number; width: number } } | null {
   const caret = caretFromPoint(x, y);
-  if (!caret || caret.node.nodeType !== Node.TEXT_NODE) return "";
+  if (!caret || caret.node.nodeType !== Node.TEXT_NODE) return null;
 
   const text = caret.node.textContent ?? "";
-  const isLetter = (char: string | undefined) => !!char && /[\p{L}\p{M}]/u.test(char);
+  const isWordChar = (char: string | undefined) => !!char && /[\p{L}\p{M}-]/u.test(char);
   let start = caret.offset;
   let end = caret.offset;
-  while (start > 0 && isLetter(text[start - 1])) start--;
-  while (end < text.length && isLetter(text[end])) end++;
-  return text.slice(start, end);
+  while (start > 0 && isWordChar(text[start - 1])) start--;
+  while (end < text.length && isWordChar(text[end])) end++;
+  // A word never starts or ends with a hyphen (e.g. dashes used as bullets).
+  while (start < end && text[start] === "-") start++;
+  while (end > start && text[end - 1] === "-") end--;
+  if (start >= end) return null;
+
+  const range = document.createRange();
+  range.setStart(caret.node, start);
+  range.setEnd(caret.node, end);
+  const box = range.getClientRects()[0] ?? range.getBoundingClientRect();
+
+  return {
+    term: text.slice(start, end),
+    rect: { left: box.left, top: box.bottom + 2, width: box.width },
+  };
 }
 
 function caretFromPoint(x: number, y: number): { node: Node; offset: number } | null {

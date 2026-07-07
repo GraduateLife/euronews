@@ -50,11 +50,16 @@ export async function describeWord(env: Env, term: string): Promise<WordInsight 
         {
           role: "system",
           content:
-            "You are a European Portuguese dictionary for Chinese learners. " +
+            "You are a European Portuguese reading assistant for Chinese learners. " +
+            "The term comes from a Portuguese news article, but news text also contains " +
+            "English loanwords, foreign names, and acronyms — identify which case it is. " +
             "Answer ONLY with a JSON object, no markdown, with exactly these keys: " +
-            '"meaning_zh" (concise Simplified Chinese definition of the term as used in European Portuguese news, max 40 chars), ' +
-            '"example_pt" (one natural European Portuguese example sentence using the term, max 20 words), ' +
-            '"image_query_en" (2-3 English words that describe a concrete, photographable scene for the term).',
+            '"meaning_zh" (Simplified Chinese, max 50 chars): for a normal European Portuguese word give a concise definition; ' +
+            "if the term is NOT Portuguese, start with a tag like 【英语】/【法语】/【专有名词】 then the meaning; " +
+            "if it is an acronym or abbreviation, start with 【缩写】 then the full expansion and its Chinese meaning " +
+            '(e.g. for "UE": 【缩写】União Europeia，欧盟). ' +
+            '"example_pt" (one natural European Portuguese sentence using the term, max 20 words). ' +
+            '"image_query_en" (2-3 English words describing a concrete, photographable scene for the term).',
         },
         { role: "user", content: `Term: "${term}"` },
       ],
