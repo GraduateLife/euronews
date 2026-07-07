@@ -589,6 +589,34 @@ textarea {
   }
 }
 
+/* The press-to-study underline: an ink stroke drawing itself beneath the
+   held word. Duration must match PRESS_MS in ArticleReader.tsx. */
+.press-ink {
+  position: fixed;
+  z-index: 15;
+  height: 2px;
+  background: var(--spot);
+  box-shadow: 0 1px 0 rgba(124, 45, 35, 0.28);
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: press-ink 550ms linear forwards;
+  pointer-events: none;
+}
+
+@keyframes press-ink {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .press-ink {
+    animation: none;
+    transform: scaleX(1);
+    opacity: 0.6;
+  }
+}
+
 mark {
   border-radius: 1px;
   background: rgba(124, 45, 35, 0.16);
