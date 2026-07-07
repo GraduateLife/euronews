@@ -14,12 +14,21 @@ import { mockArticles } from "./mockData";
 
 const apiBase = import.meta.env.VITE_API_BASE_URL ?? "";
 
+/** Silent fallbacks hide integration problems; always say why we degraded. */
+function warnFallback(what: string, error: unknown) {
+  console.warn(
+    `[api] ${what} failed (${String(error)}); serving the bundled sample data instead. ` +
+      `API base is ${apiBase ? `"${apiBase}"` : "relative (vite proxy -> localhost:8787)"} — ` +
+      "set VITE_API_BASE_URL in the repo-root .env and restart vite to target a deployed worker."
+  );
+}
+
 export async function getToday(): Promise<ArticleSummary[]> {
   try {
     const data = await requestJson<{ articles: ArticleSummary[] }>("/api/today");
     return data.articles;
-  } catch {
-    // The Worker is offline; keep the UI inspectable with the bundled fallback.
+  } catch (error) {
+    warnFallback("GET /api/today", error);
     return mockArticles.map(({ paragraphs: _paragraphs, ...summary }) => summary);
   }
 }
@@ -28,7 +37,8 @@ export async function getArticle(articleId: string): Promise<ArticleDetail> {
   try {
     const data = await requestJson<{ article: ArticleDetail }>(`/api/articles/${articleId}`);
     return data.article;
-  } catch {
+  } catch (error) {
+    warnFallback(`GET /api/articles/${articleId}`, error);
     const fallback = mockArticles.find((article) => article.id === articleId) ?? mockArticles[0];
     return fallback;
   }
@@ -44,8 +54,8 @@ export async function lookupWord(word: string): Promise<WordLookup> {
     });
 
     return data.lookup;
-  } catch {
-    // Offline fallback so the study drawer stays inspectable without the Worker.
+  } catch (error) {
+    warnFallback("POST /api/words/lookup", error);
     const headword = term.split(/\s+/)[0] ?? term;
     return {
       word: term,
@@ -136,7 +146,8 @@ export async function getReview(): Promise<ReviewState> {
   try {
     const data = await requestJson<{ review: ReviewState }>("/api/review");
     return data.review;
-  } catch {
+  } catch (error) {
+    warnFallback("GET /api/review", error);
     return { completedArticleIds: [], wordNotes: [], paragraphPractices: [] };
   }
 }
