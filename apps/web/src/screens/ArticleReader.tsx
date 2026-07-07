@@ -63,7 +63,9 @@ export function ArticleReader({ article }: { article: ArticleDetail }) {
         </button>
       </div>
 
-      <article className={showAllTranslation ? "paragraph-stack" : "paragraph-stack paragraph-stack--columns"}>
+      {/* Columns always — a broadsheet never abandons its layout because of
+          the content; the translation flows inside its paragraph block. */}
+      <article className="paragraph-stack paragraph-stack--columns">
         {article.paragraphs.map((paragraph, index) => {
           const showZh = showAllTranslation || revealed.has(paragraph.id);
           return (
