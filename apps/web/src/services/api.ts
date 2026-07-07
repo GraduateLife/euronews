@@ -12,7 +12,12 @@ import { priberamUrlFor } from "@euronews/shared";
 
 import { mockArticles } from "./mockData";
 
-const apiBase = import.meta.env.VITE_API_BASE_URL ?? "";
+// Trailing slashes would produce "https://host//api/..." which most routers
+// reject with 404, so normalise them away.
+const apiBase = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
+
+// One startup line so "is my .env being read?" is answerable from the console.
+console.info(`[api] base: ${apiBase || "(relative — vite proxy to localhost:8787)"}`);
 
 /** Silent fallbacks hide integration problems; always say why we degraded. */
 function warnFallback(what: string, error: unknown) {
