@@ -9,19 +9,31 @@ import type { Env } from "../env";
 const TRANSLATE_MODEL = "@cf/meta/m2m100-1.2b";
 const CHAT_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 
+// Cloudflare's m2m100 wrapper has accepted either full language names or ISO
+// codes depending on version, so we try both pairs before giving up.
+const LANG_PAIRS = [
+  { source_lang: "portuguese", target_lang: "chinese" },
+  { source_lang: "pt", target_lang: "zh" },
+];
+
 export async function translatePtToZh(env: Env, textPt: string): Promise<string> {
   if (!env.AI) return "";
-  try {
-    const result = (await env.AI.run(TRANSLATE_MODEL as never, {
-      text: textPt,
-      source_lang: "portuguese",
-      target_lang: "chinese",
-    } as never)) as { translated_text?: string };
-    return result.translated_text?.trim() ?? "";
-  } catch (error) {
-    console.log(JSON.stringify({ job: "translate", error: String(error) }));
-    return "";
+  let lastError: unknown = null;
+  for (const pair of LANG_PAIRS) {
+    try {
+      const result = (await env.AI.run(TRANSLATE_MODEL as never, {
+        text: textPt,
+        ...pair,
+      } as never)) as { translated_text?: string };
+      const translated = result.translated_text?.trim() ?? "";
+      if (translated) return translated;
+      lastError = `empty translated_text with ${pair.source_lang}->${pair.target_lang}`;
+    } catch (error) {
+      lastError = error;
+    }
   }
+  console.log(JSON.stringify({ job: "translate", error: String(lastError) }));
+  return "";
 }
 
 export type WordInsight = {

@@ -57,6 +57,15 @@ export async function storeArticles(db: D1Database, articles: StorableArticle[])
   }
 }
 
+/** Remove an edition and its paragraphs, so a re-run replaces the day. */
+export async function deleteEdition(db: D1Database, editionDate: string) {
+  await db
+    .prepare("DELETE FROM article_paragraphs WHERE article_id IN (SELECT id FROM articles WHERE edition_date = ?)")
+    .bind(editionDate)
+    .run();
+  await db.prepare("DELETE FROM articles WHERE edition_date = ?").bind(editionDate).run();
+}
+
 /** Persist a lazily generated translation so it is only computed once. */
 export async function saveParagraphTranslation(db: D1Database, paragraphId: string, zhHans: string) {
   await db.prepare("UPDATE article_paragraphs SET zh_hans = ? WHERE id = ?").bind(zhHans, paragraphId).run();
