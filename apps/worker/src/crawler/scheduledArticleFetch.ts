@@ -43,12 +43,13 @@ export async function refreshDailyEdition(env: Env) {
   let translatedParagraphs = 0;
 
   for (const article of fetched) {
-    const paragraphs: Array<{ pt: string; zhHans: string }> = [];
-    for (const pt of article.paragraphsPt) {
-      const zhHans = await translatePtToZh(env, pt);
-      if (zhHans) translatedParagraphs++;
-      paragraphs.push({ pt, zhHans });
-    }
+    // Translate the article's paragraphs concurrently — they are independent
+    // AI calls and doing them in series made a 5-article run take minutes.
+    const translations = await Promise.all(article.paragraphsPt.map((pt) => translatePtToZh(env, pt)));
+    const paragraphs = article.paragraphsPt.map((pt, i) => {
+      if (translations[i]) translatedParagraphs++;
+      return { pt, zhHans: translations[i] };
+    });
 
     articles.push({
       id: article.id,

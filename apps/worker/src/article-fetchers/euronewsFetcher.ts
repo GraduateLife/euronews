@@ -34,7 +34,10 @@ const BROWSER_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 const ARTICLE_DELAY_MS = 800;
 const MIN_PARAGRAPHS = 3;
-const MAX_PARAGRAPHS = 10;
+// 5 articles x 8 paragraphs = 40 AI translation calls + ~6 page fetches,
+// which stays under the 50-subrequests-per-request limit of the Workers
+// free plan with headroom.
+const MAX_PARAGRAPHS = 8;
 
 /**
  * Fetch with the honest User-Agent first; if the server rejects it with a
