@@ -42,7 +42,7 @@ export function StudyDrawer({ term, onClose }: { term: string; onClose: () => vo
           <div>
             <DrawerTitle>{term}</DrawerTitle>
             <DrawerDescription>
-              {isPhrase ? "Imagem, exemplo e a tua própria nota." : "Imagem, exemplo curto e a tua própria pista."}
+              {isPhrase ? "Definição, exemplo e a tua nota." : "Definição em português, exemplo e imagem."}
             </DrawerDescription>
           </div>
           <DrawerClose asChild>
@@ -52,18 +52,31 @@ export function StudyDrawer({ term, onClose }: { term: string; onClose: () => vo
 
         {lookup.data ? (
           <div className="drawer-body">
-            <img className="word-image" src={lookup.data.image.url} alt={lookup.data.image.alt} />
-            {lookup.data.image.attribution ? (
-              <p className="image-credit">{lookup.data.image.attribution}</p>
+            <figure className="word-figure">
+              <img className="word-image" src={lookup.data.image.url} alt={lookup.data.image.alt} />
+              {lookup.data.image.attribution ? (
+                <figcaption className="image-credit">{lookup.data.image.attribution}</figcaption>
+              ) : null}
+            </figure>
+
+            {lookup.data.definitionPt ? (
+              <section className="entry-block">
+                <p className="entry-flag">Definição</p>
+                <p className="entry-def" lang="pt-PT">
+                  {lookup.data.definitionPt}
+                </p>
+              </section>
             ) : null}
-            {lookup.data.meaningZhHans ? (
-              <p className="ai-meaning" lang="zh-Hans">
-                {lookup.data.meaningZhHans}
+
+            <section className="entry-block">
+              <p className="entry-flag">Exemplo</p>
+              <p className="entry-example" lang="pt-PT">
+                {lookup.data.examplePt}
               </p>
-            ) : null}
-            <p className="example">{lookup.data.examplePt}</p>
+            </section>
+
             <label>
-              significado
+              a tua nota
               <input
                 value={meaning}
                 onChange={(event) => setMeaning(event.target.value)}
@@ -86,7 +99,7 @@ export function StudyDrawer({ term, onClose }: { term: string; onClose: () => vo
             </a>
           </div>
         ) : (
-          <p className="muted">A procurar uma imagem e um exemplo curto.</p>
+          <p className="muted">A procurar uma definição, um exemplo e uma imagem…</p>
         )}
       </DrawerContent>
     </Drawer>
