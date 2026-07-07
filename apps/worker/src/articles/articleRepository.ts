@@ -57,6 +57,11 @@ export async function storeArticles(db: D1Database, articles: StorableArticle[])
   }
 }
 
+/** Persist a lazily generated translation so it is only computed once. */
+export async function saveParagraphTranslation(db: D1Database, paragraphId: string, zhHans: string) {
+  await db.prepare("UPDATE article_paragraphs SET zh_hans = ? WHERE id = ?").bind(zhHans, paragraphId).run();
+}
+
 export async function listStoredArticleIds(db: D1Database): Promise<Set<string>> {
   const rows = await db.prepare("SELECT id FROM articles").all<{ id: string }>();
   return new Set(rows.results.map((row) => row.id));

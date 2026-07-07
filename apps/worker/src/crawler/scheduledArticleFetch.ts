@@ -10,7 +10,10 @@ import type { Env } from "../env";
 const DAILY_ARTICLE_COUNT = 5;
 
 export async function runScheduledArticleFetch(event: ScheduledEvent, env: Env) {
-  const summary = await refreshDailyEdition(env);
+  // The scheduled handler has minutes of wall time, so the cron translates
+  // everything inline; the HTTP-triggered manual refresh cannot (waitUntil is
+  // cancelled ~30s after the response) and defers translation to first read.
+  const summary = await refreshDailyEdition(env, { translate: true });
   console.log(
     JSON.stringify({
       job: "scheduled-article-fetch",
@@ -21,11 +24,12 @@ export async function runScheduledArticleFetch(event: ScheduledEvent, env: Env) 
 }
 
 /**
- * Fetch today's edition from Euronews, translate each paragraph to Simplified
- * Chinese with Workers AI, and store everything in D1. Reused by the cron job
- * and the manual POST /api/articles/refresh endpoint.
+ * Fetch today's edition from Euronews and store it in D1. With
+ * `translate: true` every paragraph is translated to Simplified Chinese
+ * inline (cron path); otherwise paragraphs are stored untranslated and are
+ * translated lazily the first time an article is opened.
  */
-export async function refreshDailyEdition(env: Env) {
+export async function refreshDailyEdition(env: Env, options: { translate?: boolean } = {}) {
   const stored = await listStoredArticleIds(env.DB);
   const fetched = await fetchDailyEuronewsArticles({
     count: DAILY_ARTICLE_COUNT,
@@ -43,9 +47,11 @@ export async function refreshDailyEdition(env: Env) {
   let translatedParagraphs = 0;
 
   for (const article of fetched) {
-    // Translate the article's paragraphs concurrently — they are independent
-    // AI calls and doing them in series made a 5-article run take minutes.
-    const translations = await Promise.all(article.paragraphsPt.map((pt) => translatePtToZh(env, pt)));
+    // Concurrent per-article translation (cron path only) — the calls are
+    // independent, and in series a 5-article run took minutes.
+    const translations = options.translate
+      ? await Promise.all(article.paragraphsPt.map((pt) => translatePtToZh(env, pt)))
+      : article.paragraphsPt.map(() => "");
     const paragraphs = article.paragraphsPt.map((pt, i) => {
       if (translations[i]) translatedParagraphs++;
       return { pt, zhHans: translations[i] };
@@ -70,6 +76,7 @@ export async function refreshDailyEdition(env: Env) {
     editionDate,
     storedArticles: articles.map((article) => article.id),
     translatedParagraphs,
+    translationMode: options.translate ? "inline" : "on-first-read",
     aiAvailable: Boolean(env.AI),
   };
 }
