@@ -459,8 +459,29 @@ textarea {
 }
 
 .paragraph-pair {
+  position: relative;
   padding: 22px 0 24px;
   border-bottom: 1px solid var(--rule-hair);
+}
+
+/* Reading-order marker — the broadsheet columns are unfamiliar, so each
+   paragraph carries its sequence number in the top-right corner. */
+.para-num {
+  position: absolute;
+  top: 5px;
+  right: 0;
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--spot);
+  opacity: 0.85;
+  user-select: none;
+}
+
+.para-num::before {
+  content: "§ ";
+  color: var(--ink-faint);
 }
 
 .pt-text {

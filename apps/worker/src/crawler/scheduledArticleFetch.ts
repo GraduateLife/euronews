@@ -10,10 +10,10 @@ import type { Env } from "../env";
 const DAILY_ARTICLE_COUNT = 5;
 
 export async function runScheduledArticleFetch(event: ScheduledEvent, env: Env) {
-  // The scheduled handler has minutes of wall time, so the cron translates
-  // everything inline; the HTTP-triggered manual refresh cannot (waitUntil is
-  // cancelled ~30s after the response) and defers translation to first read.
-  const summary = await refreshDailyEdition(env, { translate: true });
+  // The cron defers translation to first read, same as the manual refresh:
+  // with 5 articles x 10 paragraphs, inline translation would exceed the
+  // 50-subrequests-per-invocation budget of the Workers free plan.
+  const summary = await refreshDailyEdition(env, { translate: false });
   console.log(
     JSON.stringify({
       job: "scheduled-article-fetch",

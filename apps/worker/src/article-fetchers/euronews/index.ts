@@ -45,10 +45,12 @@ export type FetchedArticle = {
 const HOME_URL = "https://pt.euronews.com/";
 const FEED_CANDIDATES = ["https://pt.euronews.com/rss", "https://pt.euronews.com/rss?format=rss"];
 const ARTICLE_DELAY_MS = 800;
-// 5 articles x 8 paragraphs = 40 AI translation calls + ~6 page fetches,
-// which stays under the 50-subrequests-per-request limit of the Workers
-// free plan with headroom.
-const MAX_PARAGRAPHS = 8;
+// Translation happens lazily on first read (<= MAX_PARAGRAPHS AI calls in
+// that one invocation), so this cap only needs to keep a single article's
+// first open under the 50-subrequests-per-invocation budget — 10 is fine.
+// If you ever switch the cron back to inline translation, recheck the
+// budget: 5 articles x paragraphs + ~7 fetches must stay under 50.
+const MAX_PARAGRAPHS = 10;
 
 export async function fetchDailyEuronewsArticles(options: {
   count: number;
