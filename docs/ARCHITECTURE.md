@@ -29,8 +29,9 @@ The Worker owns:
 The Worker is intentionally split by code boundary, not by deployment boundary:
 
 - `src/bff`: Hono BFF routes consumed by the web app.
-- `src/bff/openapi.ts`: static OpenAPI document served as `/api/openapi.json`
-  and rendered by Swagger UI at `/api/docs`.
+- `src/bff/openapi.ts`: static OpenAPI document served locally as
+  `/api/openapi.json` and rendered by Swagger UI at `/api/docs`; deployed
+  Workers return 404 for these documentation endpoints.
 - `src/article-fetchers`: article source adapters (`euronews/` split into
   feed sources, page parsing, and orchestration).
 - `src/crawler`: the daily refresh pipeline shared by cron and manual refresh.

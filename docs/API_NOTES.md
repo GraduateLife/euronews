@@ -1,9 +1,11 @@
 # API Notes
 
-Interactive API reference is served by the Worker:
+Interactive API reference is served by the Worker only for local development:
 
 - Swagger UI: `/api/docs`
 - OpenAPI JSON: `/api/openapi.json`
+
+Deployed Workers intentionally return 404 for both documentation endpoints.
 
 ## Euronews
 

@@ -6,7 +6,7 @@ This file is the quick map for external services used by `apps/worker`. Keep cre
 
 | Provider              | Use in this project                                                                               | Console / Docs                                                                                         |
 | --------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Cloudflare Workers    | Hosts the Hono BFF, scheduled cron, external fetches, and API docs                                | [Dashboard](https://dash.cloudflare.com/) / [Workers docs](https://developers.cloudflare.com/workers/) |
+| Cloudflare Workers    | Hosts the Hono BFF, scheduled cron, external fetches, and local-only API docs                     | [Dashboard](https://dash.cloudflare.com/) / [Workers docs](https://developers.cloudflare.com/workers/) |
 | Cloudflare D1         | Stores fetched articles, paragraphs, completion state, word notes, and paragraph practice history | [D1 docs](https://developers.cloudflare.com/d1/)                                                       |
 | Cloudflare Workers AI | Translates PT paragraphs to zh-Hans and describes selected words                                  | [Workers AI docs](https://developers.cloudflare.com/workers-ai/)                                       |
 | Wrangler              | Local dev, D1 migrations, secrets, deploys, logs                                                  | [Wrangler docs](https://developers.cloudflare.com/workers/wrangler/)                                   |
@@ -25,7 +25,8 @@ Used for:
 - Hono BFF under `/api/*`.
 - Scheduled article refresh via `[triggers].crons` in `apps/worker/wrangler.toml`.
 - Server-side calls to Euronews, Unsplash, and Workers AI so browser secrets are never exposed.
-- Swagger UI at `/api/docs` and OpenAPI JSON at `/api/openapi.json`.
+- Local-only Swagger UI at `/api/docs` and OpenAPI JSON at `/api/openapi.json`;
+  deployed Workers return 404 for both documentation endpoints.
 
 Local commands:
 

@@ -59,11 +59,10 @@ Worker 按职责拆分，而不是按部署单元拆分：
 ```bash
 pnpm install
 pnpm db:migrate:local
-pnpm dev:worker
-pnpm dev:web
+pnpm dev
 ```
 
-Worker 和前端建议开两个终端分别运行。前端会把 `/api/*` 代理到 `http://localhost:8787`；本地开发时可以不设置 `VITE_API_BASE_URL`。
+`pnpm dev` 会同时启动 Worker 和前端。前端会把 `/api/*` 代理到 `http://localhost:8787`；本地 Swagger 文档也由 Worker 提供，所以重启后需要确保 Worker dev server 也在运行。如果想分开看日志，也可以开两个终端分别运行 `pnpm dev:worker` 和 `pnpm dev:web`。本地开发时可以不设置 `VITE_API_BASE_URL`。
 
 常用地址：
 
@@ -113,10 +112,12 @@ curl -X POST http://localhost:8787/api/articles/refresh
 
 ## API 文档
 
-Worker 现在提供 Swagger/OpenAPI 参考：
+Worker 在本地开发环境提供 Swagger/OpenAPI 参考；部署后的 Worker 不暴露这些文档端点：
 
 - 本地 Swagger UI：`http://localhost:8787/api/docs`
 - 本地 OpenAPI JSON：`http://localhost:8787/api/openapi.json`
+
+如果浏览器提示无法连接，先确认 `pnpm dev` 或 `pnpm dev:worker` 正在运行，并且终端里能看到 Wrangler 的 `Ready on http://localhost:8787`。
 
 主要路由分组：
 

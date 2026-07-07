@@ -11,10 +11,6 @@ export const openApiDocument = {
       url: "http://localhost:8787",
       description: "Local Wrangler dev server",
     },
-    {
-      url: "https://euronews-pt-reading-lab.<your-subdomain>.workers.dev",
-      description: "Deployed Cloudflare Worker",
-    },
   ],
   tags: [
     { name: "System", description: "Health and API documentation" },

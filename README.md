@@ -59,11 +59,10 @@ See [docs/PROJECT_MEMORY.md](./docs/PROJECT_MEMORY.md) and [docs/DECISIONS.md](.
 ```bash
 pnpm install
 pnpm db:migrate:local
-pnpm dev:worker
-pnpm dev:web
+pnpm dev
 ```
 
-Run the Worker and web app in separate terminals. The web app proxies `/api/*` to `http://localhost:8787`; leave `VITE_API_BASE_URL` unset for local development.
+`pnpm dev` starts both the Worker and the web app. The web app proxies `/api/*` to `http://localhost:8787`; local Swagger is served by the Worker too, so after a restart make sure the Worker dev server is running. If you want separate logs, run `pnpm dev:worker` and `pnpm dev:web` in two terminals. Leave `VITE_API_BASE_URL` unset for local development.
 
 Useful URLs:
 
@@ -113,10 +112,12 @@ curl -X POST http://localhost:8787/api/articles/refresh
 
 ## API Reference
 
-The Worker exposes a Swagger/OpenAPI reference:
+The Worker exposes a Swagger/OpenAPI reference in local development. Deployed Workers do not expose these documentation endpoints:
 
 - Local Swagger UI: `http://localhost:8787/api/docs`
 - Local OpenAPI JSON: `http://localhost:8787/api/openapi.json`
+
+If the browser cannot connect, first confirm `pnpm dev` or `pnpm dev:worker` is running and Wrangler has printed `Ready on http://localhost:8787`.
 
 Main route groups:
 
