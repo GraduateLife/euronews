@@ -69,6 +69,9 @@ export function ArticleReader({ article }: { article: ArticleDetail }) {
           return (
             <Fragment key={paragraph.id}>
               <section className="paragraph-pair">
+                <span className="para-num" aria-hidden="true">
+                  {index + 1}
+                </span>
                 <p
                   lang="pt-PT"
                   className="pt-text selectable-text"

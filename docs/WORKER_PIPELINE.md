@@ -8,23 +8,26 @@ where to change things. Read this before touching `apps/worker`.
 The same pipeline runs in three modes, shaped by Cloudflare platform limits:
 
 ```
-1. DAILY CRON (06:00 UTC; minutes of wall time allowed)
+1. DAILY CRON (06:00 UTC)
    scheduled() → runScheduledArticleFetch
-     → refreshDailyEdition({ translate: true })
+     → refreshDailyEdition({ translate: false })
        → fetchDailyEuronewsArticles  (RSS → pick 5 → fetch pages → paragraphs)
-       → translatePtToZh per paragraph (concurrent per article)
        → deleteEdition(today) + storeArticles → D1
+   Translation is deferred to first read: 5 articles x 10 paragraphs of
+   inline translation would blow the 50-subrequest budget (see below).
+   refreshDailyEdition still accepts { translate: true } if that trade-off
+   ever changes — recheck the budget first.
 
 2. MANUAL REFRESH (POST /api/articles/refresh; one HTTP response ~10-15s)
-   Same as the cron but { translate: false } — fetch + store only.
-   Why: an HTTP-triggered invocation cannot run long enough to translate
-   (waitUntil is cancelled ~30s after the response; a full translate run
-   needs more), so translation is deferred to first read.
+   Identical to the cron. The summary (or full error chain) returns in the
+   response body. Long background work is impossible here anyway: waitUntil
+   is cancelled ~30s after the response.
 
 3. FIRST READ (GET /api/articles/:id)
    getStoredArticle → ensureTranslations: any paragraph with empty zh_hans
-   is translated now (concurrent), persisted, and returned. Later reads are
-   served straight from D1. Articles nobody opens never spend AI quota.
+   is translated now (concurrent, <= 10 calls), persisted, and returned.
+   Later reads are served straight from D1. Articles nobody opens never
+   spend AI quota.
 ```
 
 Reads fall back gracefully: `/api/today` serves the bundled sample articles
@@ -56,10 +59,11 @@ param routes (`/articles/:articleId`) or Hono will swallow them.
 
 - **waitUntil is cancelled ~30s after an HTTP response** → no long background
   work behind an HTTP endpoint; hence lazy translation.
-- **50 subrequests per invocation (free plan)** → 5 articles × 8 paragraphs
-  (`MAX_PARAGRAPHS`) = 40 AI calls + ~6 fetches. Raise counts only together
-  with this budget.
-- **Cron gets minutes of wall time** → the heavy path lives there.
+- **50 subrequests per invocation (free plan)** → the binding constraint.
+  With lazy translation the hot invocation is a first read: `MAX_PARAGRAPHS`
+  (10) AI calls. The crawl itself costs ~7 fetches. Inline translation in the
+  cron would cost 5 × `MAX_PARAGRAPHS` + ~7 — over budget at 10 paragraphs,
+  which is why the cron defers translation too.
 - **workerd ignores system proxies in local dev** → external fetches may fail
   locally even when curl works; test the crawl on the deployed worker.
 
