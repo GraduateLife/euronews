@@ -36,21 +36,23 @@ Unsplash degrade to empty/placeholder when unconfigured.
 
 ## Module map (`apps/worker/src/`)
 
-| Path | Responsibility | Typical change |
-| --- | --- | --- |
-| `lib/politeFetch.ts` | Outbound HTTP etiquette: honest UA, one browser-UA retry on 4xx, diagnosable errors | Headers, retry policy |
-| `lib/text.ts` | Pure text utils: entity decoding, HTML stripping, first-sentence | New entities |
-| `article-fetchers/euronews/feed.ts` | Article-list sources: RSS parsing, feed auto-discovery, homepage-link scraping | Feed format changes |
-| `article-fetchers/euronews/articlePage.ts` | Single-page parsing: paragraphs (JSON-LD body → `<p>` fallback), title/dek, url date, reading time | Page structure changes, boilerplate filter |
-| `article-fetchers/euronews/index.ts` | Orchestration: source cascade, video filter, dedup, random pick, fetch loop; `ARTICLE_DELAY_MS`, `MAX_PARAGRAPHS` | Selection policy, article count budget |
-| `ai/languageAi.ts` | Workers AI: `translatePtToZh` (m2m100, tries both language-code conventions), `describeWord` (llama: zh meaning + PT example + image query) | Models, prompts |
-| `articles/articleRepository.ts` | D1 read/write for articles/paragraphs/editions | Schema changes (with a migration) |
-| `articles/ensureTranslations.ts` | Lazy translate-on-first-read + persist | Translation policy |
-| `crawler/scheduledArticleFetch.ts` | `refreshDailyEdition` (the pipeline) + cron entry | Pipeline steps |
-| `bff/routes/articles.ts` | `/today`, `/articles/status`, `/articles/:id`, `/articles/refresh` | API shape |
-| `bff/routes/words.ts` | `/words/lookup` (AI insight + Unsplash + placeholder fallback), `/words/notes` | Word-drawer data |
-| `bff/routes/debug.ts` | `/debug/translate` — raw model attempts/errors | More diagnostics |
-| `study/studyRepository.ts` | Word notes / practices / completion state in D1 | Study features |
+| Path                                       | Responsibility                                                                                                                              | Typical change                             |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `lib/politeFetch.ts`                       | Outbound HTTP etiquette: honest UA, one browser-UA retry on 4xx, diagnosable errors                                                         | Headers, retry policy                      |
+| `lib/text.ts`                              | Pure text utils: entity decoding, HTML stripping, first-sentence                                                                            | New entities                               |
+| `article-fetchers/euronews/feed.ts`        | Article-list sources: RSS parsing, feed auto-discovery, homepage-link scraping                                                              | Feed format changes                        |
+| `article-fetchers/euronews/articlePage.ts` | Single-page parsing: paragraphs (JSON-LD body → `<p>` fallback), title/dek, url date, reading time                                          | Page structure changes, boilerplate filter |
+| `article-fetchers/euronews/index.ts`       | Orchestration: source cascade, video filter, dedup, random pick, fetch loop; `ARTICLE_DELAY_MS`, `MAX_PARAGRAPHS`                           | Selection policy, article count budget     |
+| `ai/languageAi.ts`                         | Workers AI: `translatePtToZh` (m2m100, tries both language-code conventions), `describeWord` (llama: zh meaning + PT example + image query) | Models, prompts                            |
+| `articles/articleRepository.ts`            | D1 read/write for articles/paragraphs/editions                                                                                              | Schema changes (with a migration)          |
+| `articles/ensureTranslations.ts`           | Lazy translate-on-first-read + persist                                                                                                      | Translation policy                         |
+| `crawler/scheduledArticleFetch.ts`         | `refreshDailyEdition` (the pipeline) + cron entry                                                                                           | Pipeline steps                             |
+| `bff/openapi.ts`                           | Static OpenAPI contract for Swagger UI and machine-readable API reference                                                                   | Request/response shape changes             |
+| `bff/routes/system.ts`                     | `/`, `/api/health`, `/api/openapi.json`, `/api/docs`                                                                                        | API docs/health behavior                   |
+| `bff/routes/articles.ts`                   | `/today`, `/articles/status`, `/articles/:id`, `/articles/refresh`                                                                          | API shape                                  |
+| `bff/routes/words.ts`                      | `/words/lookup` (AI insight + Unsplash + placeholder fallback), `/words/notes`                                                              | Word-drawer data                           |
+| `bff/routes/debug.ts`                      | `/debug/translate` — raw model attempts/errors                                                                                              | More diagnostics                           |
+| `study/studyRepository.ts`                 | Word notes / practices / completion state in D1                                                                                             | Study features                             |
 
 Route order gotcha: register literal routes (`/articles/status`) **before**
 param routes (`/articles/:articleId`) or Hono will swallow them.

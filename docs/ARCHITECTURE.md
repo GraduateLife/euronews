@@ -29,6 +29,8 @@ The Worker owns:
 The Worker is intentionally split by code boundary, not by deployment boundary:
 
 - `src/bff`: Hono BFF routes consumed by the web app.
+- `src/bff/openapi.ts`: static OpenAPI document served as `/api/openapi.json`
+  and rendered by Swagger UI at `/api/docs`.
 - `src/article-fetchers`: article source adapters (`euronews/` split into
   feed sources, page parsing, and orchestration).
 - `src/crawler`: the daily refresh pipeline shared by cron and manual refresh.
@@ -67,8 +69,13 @@ Later storage:
 
 ## API Shape
 
+- `GET /api/health`
+- `GET /api/openapi.json`
+- `GET /api/docs`
 - `GET /api/today`
+- `GET /api/articles/status`
 - `GET /api/articles/:id`
+- `POST /api/articles/refresh`
 - `POST /api/articles/:id/complete`
 - `POST /api/words/lookup`
 - `POST /api/words/notes`

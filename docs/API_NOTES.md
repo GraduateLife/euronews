@@ -1,5 +1,10 @@
 # API Notes
 
+Interactive API reference is served by the Worker:
+
+- Swagger UI: `/api/docs`
+- OpenAPI JSON: `/api/openapi.json`
+
 ## Euronews
 
 Use the Portuguese site as article source. Keep source URL and publication metadata. Avoid pretending we own the content.
@@ -21,3 +26,5 @@ Use the official API through the Worker so credentials are not exposed client-si
 ## Cloudflare AI
 
 Use Workers AI as fallback for generated visual mnemonics when Unsplash is weak for a word.
+
+See `docs/SERVICE_PROVIDERS.md` for provider setup, operational notes, and quick links.
