@@ -72,7 +72,12 @@ export async function fetchDailyEuronewsArticles(options: {
   count: number;
   isAlreadyStored: (id: string) => boolean;
 }): Promise<FetchedArticle[]> {
-  const items = await loadFeedItems();
+  const loaded = await loadFeedItems();
+
+  // Proper written articles make better study material than video captions;
+  // only fall back to the full list if excluding videos starves the pool.
+  const written = loaded.filter((item) => !/\/video\//.test(item.link));
+  const items = written.length >= options.count ? written : loaded;
 
   const fresh = items.filter((item) => !options.isAlreadyStored(articleIdFromUrl(item.link)));
   const pool = fresh.length >= options.count ? fresh : items;

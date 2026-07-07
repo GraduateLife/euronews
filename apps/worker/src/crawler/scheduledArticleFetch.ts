@@ -3,7 +3,7 @@ import {
   estimateMinutes,
   fetchDailyEuronewsArticles,
 } from "../article-fetchers/euronewsFetcher";
-import { listStoredArticleIds, storeArticles } from "../articles/articleRepository";
+import { deleteEdition, listStoredArticleIds, storeArticles } from "../articles/articleRepository";
 import type { StorableArticle } from "../articles/articleRepository";
 import type { Env } from "../env";
 
@@ -70,6 +70,9 @@ export async function refreshDailyEdition(env: Env, options: { translate?: boole
     });
   }
 
+  // Replace today's edition atomically-enough: re-running refresh swaps the
+  // day's articles instead of piling more onto the same edition_date.
+  await deleteEdition(env.DB, editionDate);
   await storeArticles(env.DB, articles);
 
   return {
